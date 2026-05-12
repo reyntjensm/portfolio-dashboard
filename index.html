@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Portefeuille · Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#08090d;--s1:#0e1018;--s2:#141722;--s3:#1a1f2e;
+  --b1:#1e2436;--b2:#252d40;
+  --text:#e8ecf8;--muted:#65728f;--muted2:#404d6a;
+  --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;
+  --green:#22c55e;--red:#ef4444;--orange:#f59e0b;--blue:#4285f4;--purple:#8b5cf6;
+  --gd:rgba(34,197,94,.12);--rd:rgba(239,68,68,.12);--od:rgba(245,158,11,.12);--bd:rgba(66,133,244,.12);
+  --sb:env(safe-area-inset-bottom,16px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;min-height:100vh;padding-bottom:calc(74px + var(--sb));}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(8,9,13,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--b1);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:2px;}.logo em{color:var(--green);font-style:normal;}
+.tb-right{display:flex;align-items:center;gap:8px;}
+.live-badge{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--muted);padding:4px 8px;border:1px solid var(--b1);border-radius:20px;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--b1);background:var(--s1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;}
+
+/* PAGES */
+.page{display:none;}.page.active{display:block;}
+
+/* PORTFOLIO HERO */
+.port-hero{margin:14px 16px;background:var(--s1);border:1px solid var(--b1);border-radius:18px;padding:20px;position:relative;overflow:hidden;}
+.port-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--green),var(--blue),var(--orange),var(--purple));}
+.ph-lbl{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.ph-total{font-family:var(--mono);font-size:38px;font-weight:700;letter-spacing:-1.5px;line-height:1;margin-bottom:6px;}
+.ph-pnl-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+.ph-pnl{font-family:var(--mono);font-size:13px;font-weight:700;padding:4px 10px;border-radius:8px;}
+.ph-pct{font-family:var(--mono);font-size:12px;}
+.ph-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.ph-stat{background:var(--s2);border-radius:10px;padding:10px 12px;}
+.ph-sl{font-family:var(--mono);font-size:8px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.ph-sv{font-family:var(--mono);font-size:12px;font-weight:700;}
+
+/* STOCK TABS */
+.stock-tabs{display:flex;gap:8px;padding:0 16px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px;}
+.stock-tabs::-webkit-scrollbar{display:none;}
+.stab{flex-shrink:0;display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:24px;border:1px solid var(--b1);background:var(--s1);cursor:pointer;transition:all .15s;}
+.stab.active{border-color:var(--tc)!important;background:rgba(255,255,255,.03);}
+.stab-dot{width:7px;height:7px;border-radius:50%;}
+.stab-ticker{font-family:var(--mono);font-size:11px;font-weight:700;}
+.stab-chg{font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;}
+
+/* OVERVIEW CARDS */
+.ov-list{padding:0 16px;display:flex;flex-direction:column;gap:10px;}
+.ov-card{background:var(--s1);border:1px solid var(--b1);border-radius:16px;overflow:hidden;cursor:pointer;transition:all .18s;position:relative;}
+.ov-card:active{transform:scale(.98);}
+.ov-stripe{position:absolute;top:0;left:0;bottom:0;width:3px;}
+.ov-top{display:flex;align-items:center;gap:12px;padding:14px 16px 10px;}
+.ov-logo{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:800;font-size:10px;color:#fff;flex-shrink:0;}
+.ov-info{flex:1;}
+.ov-name{font-size:14px;font-weight:700;line-height:1.2;}
+.ov-ticker{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.ov-price-block{text-align:right;}
+.ov-price{font-family:var(--mono);font-size:17px;font-weight:800;}
+.ov-chg{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;display:inline-block;margin-top:2px;}
+.ov-spark{padding:0 16px 4px;}
+.ov-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b1);}
+.ovm{background:var(--s1);padding:9px 12px;}
+.ovm-l{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:2px;}
+.ovm-v{font-family:var(--mono);font-size:12px;font-weight:700;}
+.ov-no-pos{padding:10px 16px 14px;font-family:var(--mono);font-size:10px;color:var(--muted2);}
+
+/* DETAIL STOCK CARD */
+.det-card{margin:0 16px 12px;background:var(--s1);border:1px solid var(--b1);border-radius:18px;overflow:hidden;}
+.dc-header{padding:16px 18px 14px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--b1);}
+.dc-logo-wrap{display:flex;align-items:center;gap:12px;}
+.dc-logo{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:800;font-size:11px;color:#fff;flex-shrink:0;}
+.dc-name{font-size:16px;font-weight:700;line-height:1.2;}
+.dc-sub{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.3px;margin-top:1px;}
+.dc-price-block{text-align:right;}
+.dc-price{font-family:var(--mono);font-size:26px;font-weight:800;letter-spacing:-.5px;line-height:1;}
+.dc-chg{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block;margin-top:4px;}
+
+/* POSITION BLOCK */
+.dc-pos{padding:14px 18px;background:var(--s2);border-bottom:1px solid var(--b1);}
+.dc-pos-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.dc-pos-title{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);}
+.dc-edit{font-family:var(--mono);font-size:9px;color:var(--blue);padding:2px 8px;border:1px solid rgba(66,133,244,.3);border-radius:4px;cursor:pointer;background:rgba(66,133,244,.08);}
+.pnl-box{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:12px 14px;}
+.pnl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.pnl-row:last-child{margin-bottom:0;}
+.pnl-l{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);}
+.pnl-v{font-family:var(--mono);font-size:14px;font-weight:700;}
+.pnl-sep{height:1px;background:var(--b1);margin:8px 0;}
+.no-pos-box{text-align:center;padding:16px;background:var(--s1);border-radius:12px;border:1px dashed var(--b2);}
+.no-pos-icon{font-size:24px;margin-bottom:6px;}
+.no-pos-title{font-size:13px;font-weight:600;margin-bottom:3px;}
+.no-pos-sub{font-size:12px;color:var(--muted);}
+
+/* CHART */
+.dc-chart{padding:14px 18px 6px;}
+.dc-chart-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.dc-chart-lbl{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.period-tabs{display:flex;gap:5px;}
+.ptab{font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 13px;border-radius:20px;border:1px solid var(--b1);color:var(--muted);cursor:pointer;background:var(--s2);transition:all .15s;user-select:none;-webkit-user-select:none;}
+.ptab.active{border-color:var(--card-color,#4285f4);color:var(--card-color,#4285f4);background:rgba(255,255,255,.04);}
+.ptab:active{transform:scale(.94);}
+.chart-stat-row{display:flex;gap:8px;margin-bottom:10px;}
+.cs-box{flex:1;background:var(--s2);border-radius:8px;padding:7px 10px;text-align:center;}
+.cs-lbl{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:2px;}
+.cs-val{font-family:var(--mono);font-size:12px;font-weight:700;}
+.chart-xl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:5px;padding:0 2px;}
+
+/* OVERVIEW VIEW TOGGLE */
+.ov-toggle-bar{display:flex;gap:6px;padding:0 16px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none;}
+.ov-toggle-bar::-webkit-scrollbar{display:none;}
+.ovt{font-family:var(--mono);font-size:10px;font-weight:600;padding:6px 14px;border-radius:20px;border:1px solid var(--b1);background:var(--s1);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;user-select:none;-webkit-user-select:none;}
+.ovt.active{background:var(--s2);border-color:var(--green);color:var(--green);}
+.ovt:active{transform:scale(.95);}
+.ov-rend-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--b1);}
+.ovr-cell{background:var(--s1);padding:9px 12px;}
+.ovr-l{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:3px;}
+.ovr-v{font-family:var(--mono);font-size:13px;font-weight:800;}
+
+/* RATIOS GRID */
+.dc-ratios{border-bottom:1px solid var(--b1);}
+.ratios-title{padding:12px 18px 8px;font-family:var(--mono);font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);}
+.ratios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--b1);}
+.ratio-cell{background:var(--s1);padding:10px 14px;}
+.ratio-l{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:3px;}
+.ratio-v{font-family:var(--mono);font-size:13px;font-weight:700;}
+.ratio-v.g{color:var(--green);}
+.ratio-v.r{color:var(--red);}
+.ratio-v.o{color:var(--orange);}
+
+/* ANALYST SECTION */
+.dc-analysts{padding:14px 18px;border-bottom:1px solid var(--b1);}
+.analyst-title{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.consensus-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.cons-badge{font-family:var(--mono);font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;}
+.cons-buy{background:var(--gd);color:var(--green);}
+.cons-hold{background:var(--od);color:var(--orange);}
+.cons-sell{background:var(--rd);color:var(--red);}
+.cons-detail{font-size:12px;color:var(--muted);}
+.cons-detail strong{color:var(--text);}
+.target-row{display:flex;gap:6px;margin-bottom:12px;}
+.target-box{flex:1;background:var(--s2);border-radius:8px;padding:8px 10px;text-align:center;}
+.target-l{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:3px;}
+.target-v{font-family:var(--mono);font-size:14px;font-weight:700;}
+.target-updown{font-family:var(--mono);font-size:9px;margin-top:2px;}
+.analyst-bar{margin-bottom:12px;}
+.abar-lbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:4px;}
+.abar-track{height:6px;background:var(--s3);border-radius:3px;overflow:hidden;display:flex;}
+.abar-buy{height:100%;background:var(--green);border-radius:3px 0 0 3px;}
+.abar-hold{height:100%;background:var(--orange);}
+.abar-sell{height:100%;background:var(--red);border-radius:0 3px 3px 0;}
+.analyst-updates{display:flex;flex-direction:column;gap:7px;}
+.au-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:var(--s2);border-radius:10px;}
+.au-dir{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0;margin-top:2px;}
+.au-up{background:var(--gd);color:var(--green);}
+.au-hold{background:var(--od);color:var(--orange);}
+.au-dn{background:var(--rd);color:var(--red);}
+.au-body{flex:1;}
+.au-firm{font-size:12px;font-weight:700;margin-bottom:1px;}
+.au-detail{font-size:11px;color:var(--muted);}
+.au-date{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-left:auto;flex-shrink:0;}
+
+/* NEWS SECTION */
+.dc-news{padding:14px 18px;}
+.news-title{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.news-item{padding:11px 0;border-bottom:1px solid var(--b1);}
+.news-item:last-child{border-bottom:none;}
+.ni-meta{display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap;}
+.ni-badge{font-family:var(--mono);font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;}
+.nb-earn{background:rgba(34,197,94,.15);color:var(--green);}
+.nb-risk{background:rgba(239,68,68,.15);color:var(--red);}
+.nb-cat{background:rgba(66,133,244,.15);color:var(--blue);}
+.nb-ana{background:rgba(245,158,11,.15);color:var(--orange);}
+.nb-corp{background:rgba(139,92,246,.15);color:var(--purple);}
+.ni-date{font-family:var(--mono);font-size:9px;color:var(--muted2);}
+.ni-time{font-family:var(--mono);font-size:9px;color:var(--muted2);background:var(--s2);padding:1px 5px;border-radius:3px;}
+.ni-title{font-size:13px;font-weight:700;line-height:1.4;margin-bottom:5px;}
+.ni-body{font-size:12px;color:var(--muted);line-height:1.6;}
+.ni-body strong{color:var(--text);}
+
+/* NEXT EVENT */
+.ev-banner{margin:0 16px 12px;background:var(--s1);border:1px solid var(--b1);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.ev-icon{font-size:22px;flex-shrink:0;}
+.ev-lbl{font-family:var(--mono);font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+.ev-title{font-size:13px;font-weight:700;}
+.ev-date{font-family:var(--mono);font-size:11px;font-weight:700;margin-left:auto;text-align:right;flex-shrink:0;}
+
+/* CALENDAR */
+.cal-wrap{padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
+.cal-sec-hdr{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--b1);}
+.cal-item{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;}
+.cal-date-block{text-align:center;min-width:40px;}
+.cal-day{font-family:var(--mono);font-size:20px;font-weight:800;line-height:1;}
+.cal-month{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;}
+.cal-div{width:1px;height:36px;background:var(--b2);}
+.cal-info{flex:1;}
+.cal-title{font-size:13px;font-weight:600;margin-bottom:2px;}
+.cal-sub{font-size:11px;color:var(--muted);}
+.cal-badge{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;flex-shrink:0;}
+.cb-e{background:var(--gd);color:var(--green);}
+.cb-c{background:var(--bd);color:var(--blue);}
+.cb-d{background:var(--od);color:var(--orange);}
+.cb-u{background:var(--rd);color:var(--red);animation:blink 1.5s infinite;}
+
+/* DRAWER */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;opacity:0;pointer-events:none;transition:opacity .3s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.drawer{position:fixed;bottom:0;left:0;right:0;z-index:400;background:var(--s1);border-top:1px solid var(--b2);border-radius:20px 20px 0 0;padding:20px 20px calc(20px + var(--sb));transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);max-height:88vh;overflow-y:auto;}
+.drawer.open{transform:translateY(0);}
+.drawer-handle{width:36px;height:4px;border-radius:2px;background:var(--b2);margin:0 auto 18px;}
+.drawer-title{font-size:18px;font-weight:700;margin-bottom:4px;}
+.drawer-sub{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+.dr-stock{background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:14px;margin-bottom:10px;}
+.dr-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.dr-logo{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:800;color:#fff;}
+.dr-name{font-size:13px;font-weight:700;}
+.dr-price{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.dr-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dr-iw{background:var(--s1);border:1px solid var(--b2);border-radius:10px;padding:10px 12px;transition:border-color .15s;}
+.dr-iw:focus-within{border-color:var(--blue);}
+.dr-lbl{font-family:var(--mono);font-size:8px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.dr-input{font-family:var(--mono);font-size:17px;font-weight:700;background:transparent;border:none;outline:none;color:var(--text);width:100%;}
+.dr-input::placeholder{color:var(--muted2);}
+.dr-save{width:100%;padding:14px;background:var(--green);border:none;border-radius:12px;font-family:var(--mono);font-size:13px;font-weight:700;color:#000;cursor:pointer;margin-top:16px;letter-spacing:.5px;transition:opacity .15s;}
+.dr-save:active{opacity:.8;}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(8,9,13,.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--b1);padding:10px 0 calc(10px + var(--sb));display:flex;justify-content:space-around;}
+.bnav{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 16px;border-radius:10px;transition:all .15s;}
+.bnav.active{background:rgba(255,255,255,.04);}
+.bnav-icon{font-size:20px;line-height:1;}
+.bnav-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.5px;color:var(--muted);}
+.bnav.active .bnav-lbl{color:var(--green);}
+
+/* UTIL */
+.up{background:var(--gd);color:var(--green);}
+.dn{background:var(--rd);color:var(--red);}
+.ne{background:var(--od);color:var(--orange);}
+.g{color:var(--green)!important;}
+.r{color:var(--red)!important;}
+.o{color:var(--orange)!important;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">PORT<em>.</em>FOLIO</div>
+  <div class="tb-right">
+    <div class="live-badge"><div class="live-dot"></div>LADEN...</div>
+    <div class="icon-btn" title="Aandeel toevoegen" onclick="openAddTicker()">➕</div>
+    <div class="icon-btn" title="Sync met cloud" onclick="syncNow()">🔄</div>
+    <div class="icon-btn" onclick="openDrawer()">⚙️</div>
+  </div>
+</div>
+
+<!-- SETUP BANNER — shown if table doesn't exist yet -->
+<div id="db-status-banner" style="display:none;margin:12px 16px;background:var(--s1);border:1px solid var(--orange);border-radius:12px;padding:16px;">
+  <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--orange);margin-bottom:10px;">⚠️ API KEY ONTBREEKT</div>
+  <div style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:12px;">
+    <strong style="color:var(--text);">Stap 1:</strong> Gratis key ophalen via <a href="https://finnhub.io/register" target="_blank" style="color:var(--blue);">finnhub.io/register</a><br>
+    <strong style="color:var(--text);">Stap 2:</strong> Open index.html in tekstverwerker en vervang <code style="background:var(--s2);padding:1px 5px;border-radius:3px;">JOUW_FMP_API_KEY_HIER</code> door je key.
+  </div>
+  <button onclick="retryConnection()" style="font-family:var(--mono);font-size:11px;padding:8px 16px;border-radius:8px;border:1px solid var(--green);background:var(--gd);color:var(--green);cursor:pointer;">✓ Key toegevoegd — opnieuw laden</button>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Positie Invoer</div>
+  <div class="drawer-sub">Voer je aantallen en gemiddelde aankoopprijs in. Winst/verlies wordt automatisch berekend.</div>
+  <div id="drawer-stocks"></div>
+  <button class="dr-save" onclick="savePositions()">✓ Opslaan & Berekenen</button>
+</div>
+
+<!-- OVERVIEW PAGE -->
+<div class="page active" id="page-overview">
+  <div class="port-hero" id="summary-card">
+    <div class="ph-lbl">Totale Portefeuillewaarde</div>
+    <div class="ph-total" id="ph-total" style="color:var(--green);">—</div>
+    <div class="ph-pnl-row">
+      <div class="ph-pnl ne" id="ph-pnl">⚙️ Voer posities in</div>
+      <div class="ph-pct" id="ph-pct" style="font-family:var(--mono);font-size:12px;color:var(--muted);"></div>
+    </div>
+    <div class="ph-stats">
+      <div class="ph-stat"><div class="ph-sl">Posities</div><div class="ph-sv">5</div></div>
+      <div class="ph-stat"><div class="ph-sl">Beste 52w</div><div class="ph-sv" style="color:var(--green);">IFX +100%</div></div>
+      <div class="ph-stat"><div class="ph-sl">Slechtste 52w</div><div class="ph-sv" style="color:var(--red);">SOF −21%</div></div>
+    </div>
+  </div>
+  <!-- VIEW MODE TOGGLE -->
+  <div class="ov-toggle-bar">
+    <div class="ovt active" onclick="setOvMode('rendement',this)">📊 Mijn Rendement</div>
+    <div class="ovt" onclick="setOvMode('dag',this)">📅 Dagelijks</div>
+    <div class="ovt" onclick="setOvMode('52w',this)">📆 52 Weken</div>
+    <div class="ovt" onclick="setOvMode('ytd',this)">🗓️ YTD 2026</div>
+    <div class="ovt" onclick="setOvMode('markt',this)">💹 Marktinfo</div>
+  </div>
+  <div class="ov-list" id="ov-list"></div>
+</div>
+
+<!-- DETAIL PAGE -->
+<div class="page" id="page-detail">
+  <div class="stock-tabs" id="stock-tabs"></div>
+  <div id="detail-area"></div>
+</div>
+
+<!-- CALENDAR PAGE -->
+<div class="page" id="page-calendar">
+  <div class="cal-wrap">
+    <div class="cal-sec-hdr">AANKOMENDE EVENTS · PORTEFEUILLE</div>
+    <div class="cal-item" style="border-color:rgba(239,68,68,.35);">
+      <div class="cal-date-block"><div class="cal-day" style="color:var(--red);">6</div><div class="cal-month">MEI</div></div>
+      <div class="cal-div"></div>
+      <div class="cal-info"><div class="cal-title">Infineon Q2 FY2026 Earnings</div><div class="cal-sub">IFX · Vandaag na beurs · RSI 78 overbought · resultaten automotief + industrial</div>
+        <div style="margin-top:4px;"><a href="https://finance.yahoo.com/quote/IFX.DE/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">IFX.DE Yahoo Finance →</a></div>
+      </div>
+      <div class="cal-badge cb-u">VANDAAG</div>
+    </div>
+    <div class="cal-item" style="border-color:rgba(245,158,11,.35);">
+      <div class="cal-date-block"><div class="cal-day" style="color:var(--orange);">11</div><div class="cal-month">MEI</div></div>
+      <div class="cal-div"></div>
+      <div class="cal-info"><div class="cal-title">Apple Dividend Ex-Datum</div><div class="cal-sub">AAPL · $0,27/aandeel · kwartaaldividend · uitbetaling 15 mei</div>
+        <div style="margin-top:4px;"><a href="https://finance.yahoo.com/quote/AAPL/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">AAPL Yahoo Finance →</a></div>
+      </div>
+      <div class="cal-badge cb-d">DIVIDEND</div>
+    </div>
+    <div class="cal-item" style="border-color:rgba(232,160,32,.35);">
+      <div class="cal-date-block"><div class="cal-day" style="color:#e8a020;">20</div><div class="cal-month">MEI</div></div>
+      <div class="cal-div"></div>
+      <div class="cal-info"><div class="cal-title">Ackermans Q1 2026 Trading Update</div><div class="cal-sub">ACKB · Voor beurs · DEME offshore + Delen PB Q1 instroom in focus</div>
+        <div style="margin-top:4px;"><a href="https://finance.yahoo.com/quote/AKA.BR/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">AKA.BR Yahoo Finance →</a>&nbsp;<a href="https://www.ackermansvanhaaren.be/nl/investeerders/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">IR Website →</a></div>
+      </div>
+      <div class="cal-badge cb-e">EARNINGS</div>
+    </div>
+    <div class="cal-item">
+      <div class="cal-date-block"><div class="cal-day" style="color:var(--purple);">Jun</div><div class="cal-month">2026</div></div>
+      <div class="cal-div"></div>
+      <div class="cal-info"><div class="cal-title">Sofina H1 2026 NAV Update</div><div class="cal-sub">SOF · Rond september · evolutie private equity portefeuille · ~€10,5B AuM</div>
+        <div style="margin-top:4px;"><a href="https://finance.yahoo.com/quote/SOF.BR/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">SOF.BR Yahoo Finance →</a>&nbsp;<a href="https://www.sofinagroup.com/en/investors" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">IR Website →</a></div>
+      </div>
+      <div class="cal-badge cb-e">UPDATE</div>
+    </div>
+    <div class="cal-item" style="border-color:rgba(170,170,170,.2);">
+      <div class="cal-date-block"><div class="cal-day" style="color:#c0c0c0;">9</div><div class="cal-month">JUN</div></div>
+      <div class="cal-div"></div>
+      <div class="cal-info"><div class="cal-title">Apple WWDC 2026</div><div class="cal-sub">AAPL · 9–13 juni · Siri 2.0, Apple Intelligence updates · kans op koersstijging</div>
+        <div style="margin-top:4px;"><a href="https://developer.apple.com/wwdc26/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">Apple WWDC →</a></div>
+      </div>
+      <div class="cal-badge cb-c">KATALYSATOR</div>
+    </div>
+    <div class="cal-item" style="border-color:rgba(66,133,244,.35);">
+      <div class="cal-date-block"><div class="cal-day" style="color:var(--blue);">Jul</div><div class="cal-month">2026</div></div>
+      <div class="cal-div"></div>
+      <div class="cal-info"><div class="cal-title">Alphabet Q2 2026 Earnings</div><div class="cal-sub">GOOGL · Late juli · Cloud backlog conversie · DOJ antitrust update</div>
+        <div style="margin-top:4px;"><a href="https://finance.yahoo.com/quote/GOOGL/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">GOOGL Yahoo Finance →</a>&nbsp;<a href="https://abc.xyz/investor/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">Alphabet IR →</a></div>
+      </div>
+      <div class="cal-badge cb-e">EARNINGS</div>
+    </div>
+    <div class="cal-item" style="border-color:rgba(170,170,170,.15);">
+      <div class="cal-date-block"><div class="cal-day" style="color:#c0c0c0;">Jul</div><div class="cal-month">2026</div></div>
+      <div class="cal-div"></div>
+      <div class="cal-info"><div class="cal-title">Apple Q3 FY2026 Earnings</div><div class="cal-sub">AAPL · Eind juli · CEO-transitie update · WWDC follow-through</div>
+        <div style="margin-top:4px;"><a href="https://investor.apple.com/sec-filings/annual-reports/default.aspx" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">Apple IR →</a></div>
+      </div>
+      <div class="cal-badge cb-e">EARNINGS</div>
+    </div>
+    <div class="cal-item">
+      <div class="cal-date-block"><div class="cal-day" style="color:var(--green);">Aug</div><div class="cal-month">2026</div></div>
+      <div class="cal-div"></div>
+      <div class="cal-info"><div class="cal-title">Infineon Q3 FY2026 + Sofina H1</div><div class="cal-sub">IFX + SOF · augustus cyclus · EV-herstel check + NAV evolutie Sofina</div>
+        <div style="margin-top:4px;"><a href="https://www.infineon.com/cms/en/about-infineon/investor/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">Infineon IR →</a></div>
+      </div>
+      <div class="cal-badge cb-e">EARNINGS</div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <div class="bnav active" id="nav-overview" onclick="showPage('overview')"><div class="bnav-icon">📊</div><div class="bnav-lbl">OVERZICHT</div></div>
+  <div class="bnav" id="nav-detail" onclick="showPage('detail')"><div class="bnav-icon">📈</div><div class="bnav-lbl">DETAIL</div></div>
+  <div class="bnav" id="nav-calendar" onclick="showPage('calendar')"><div class="bnav-icon">📅</div><div class="bnav-lbl">KALENDER</div></div>
+</div>
+
+<script>
+// ─── STOCK DATA ──────────────────────────────────────────────────────────────
+const STOCKS = {
+  AAPL:{
+    name:'Apple', full:'Apple Inc.', ticker:'AAPL', exchange:'NASDAQ · USD', cur:'$',
+    price:292.68, chg:'+0,20%', chgNum:0.20, dir:'up',
+    color:'#c0c0c0', logoBg:'linear-gradient(135deg,#3a3a3a,#a0a0a0)', logoTxt:'AAPL',
+    wkH:294.76, wkL:193.46,
+    ratios:{
+      'P/E (TTM)':'29,5×','P/E Fwd':'27,8×','EV/EBITDA':'21×',
+      'P/S':'8,2×','Brutomarge':'49,3%','Bedrijfsmarge':'33%',
+      'ROE':'171%','Schuld/Eigen V.':'1,87×','Vrije KS/aandeel':'$6,80',
+      'Dividend Yield':'0,39%','Beta':'1,24','Mktcap':'$4,1T'
+    },
+    analysts:{
+      consensus:'Gematigd Kopen', buy:17, hold:9, sell:1, total:27,
+      avgTarget:302, highTarget:350, lowTarget:200, current:280.07,
+      updates:[
+        {dir:'up',firm:'Wedbush (Dan Ives)',action:'Verhoogt doel',from:'$325',to:'$350',rating:'Outperform',date:'1 mei 2026',note:'Street-high doel. "Golden installed base" + iPhone 17 supercyclus draagt bij tot multi-jaar upgrade golf. Foldable iPhone Fall 2026 als volgende supercyclus.'},
+        {dir:'up',firm:'Citi (Atif Malik)',action:'Verhoogt doel',from:'$315',to:'$330',rating:'Buy',date:'1 mei 2026',note:'Versnellende Services-omzet en AI-monetisatiepotentieel. Q2 beat overtuigde Citi om doel te verhogen.'},
+        {dir:'up',firm:'J.P. Morgan (Samik Chatterjee)',action:'Handhaaft',from:'$315',to:'$315',rating:'Overweight',date:'1 mei 2026',note:'"Veerkrachtige marges, uitbreidende services en opkomende AI-upside." Sterke iPhone 17 China recovery bevestigd.'},
+        {dir:'hold',firm:'UBS',action:'Handhaaft Neutraal',from:'$290',to:'$296',rating:'Neutraal',date:'1 mei 2026',note:'Voorzichtig over Tim Cook CEO-exit onzekerheid. Valuation redelijk maar niet goedkoop. Wacht op WWDC AI-duidelijkheid.'},
+        {dir:'dn',firm:'Jefferies',action:'Downgrade',from:'$250',to:'$205',rating:'Underperform',date:'okt 2025',note:'Structurele zorgen over verlengende upgrade-cycli en Chinese concurrentie. iPhone 17 succes verzacht thesis maar kernrisico blijft.'}
+      ]
+    },
+    news:[
+      {badge:'nb-earn',bl:'EARNINGS · Q2 FY2026',date:'30 apr 2026',time:'21:30 CET',
+       title:'Apple Q2 FY2026 · EPS $2,01 beat · Revenue $111,2B +17% YoY · Stock +3,2%',
+       body:'Apple rapporteerde een <strong>recordkwartaal voor maart</strong>. EPS van $2,01 overtrof consensus van $1,95. Omzet van $111,2B sloeg verwachtingen van $109,7B. <strong>iPhone</strong> genereerde $57B (+22% YoY) — zijn sterkste ooit voor een maart-kwartaal, gedreven door iPhone 17 en China-herstel. <strong>Services</strong> bereikte een nieuw all-time high van $31B (+17% YoY), met groei in App Store, iCloud+, Apple Music en Apple TV+. <strong>Brutomarge</strong> van 49,3% overtrof de verwachte 48,4% ondanks tariefdruk en geheugenkosten. Mac (+18%), iPad (+24%) en Wearables (+8%) presteerden allemaal boven verwachting. CFO Kevan Parekh benadrukte dat <strong>Apple Intelligence</strong> de upgrade-intenties bij bestaande gebruikers zichtbaar verhoogt.'},
+      {badge:'nb-corp',bl:'CEO · CORPORATE',date:'30 apr 2026',time:'23:45 CET',
+       title:'Tim Cook kondigt vertrek aan als CEO na 15 jaar — wordt Executive Chairman',
+       body:'Na de earnings call kondigde Tim Cook aan CEO te worden van Apple te verlaten en over te stappen naar de rol van Executive Chairman. <strong>Geen naam van opvolger bevestigd.</strong> Analisten speculeren over John Ternus (hardware), Craig Federighi (software) of Eddy Cue (services). De markt reageerde neutraal (+0,4% namarkt). Cook benadrukte dat de <strong>Apple Intelligence roadmap</strong> en foldable iPhone-pipeline al klaar zijn voor zijn opvolger. CEO-transitie gepland voor uiterlijk Q4 2026.'},
+      {badge:'nb-cat',bl:'KATALYSATOR · WWDC',date:'9 jun 2026',time:'19:00 CET',
+       title:'Apple WWDC 2026 · Siri 2.0 · Apple Intelligence 2.0 · Mogelijke Koerskatalysator',
+       body:'Investeerders kijken uit naar <strong>WWDC 9–13 juni</strong> voor Apple\'s volledige AI-roadmap. Verwacht: <strong>Siri 2.0</strong> met Gemini-powered backend en on-device reasoning, agentic workflows die taken autonoom afhandelen, diepere integratie van Apple Intelligence in alle apps. Analisten zoals Dan Ives (Wedbush) noemen WWDC "de meest kritieke software-aankondiging in Apple\'s geschiedenis". Sterk WWDC heeft historisch de koers 5–12% verhoogd in de drie weken erna. <strong>Foldable iPhone</strong> geruchten bevestigd door Bank of America Asia-supply chain checks voor Fall 2026.'},
+      {badge:'nb-risk',bl:'RISICO · SUPPLY CHAIN',date:'apr 2026',time:'',
+       title:'Geheugenkrapte en TSMC 3nm schaarste drukken marges · Tariefrisico China',
+       body:'CEO Tim Cook waarschuwde op de earnings call voor een <strong>"extended memory crunch"</strong> waarbij Apple geheugenkosten absorbeert i.p.v. door te rekenen. TSMC\'s 3nm capaciteit is overboekt door concurrentie van AI-chips (NVIDIA, AMD). Apple ontvangt lagere prioriteit voor sommige chips. Analisten schatten de impact op <strong>50–80 basispunten marge</strong> in H2 2026. Bijkomend risico: de VS-China handelsspanningen dreigen opnieuw met hogere tarieven op iPhone-componenten geproduceerd in China. Apple\'s alternatieven via India-productie (Tata, Foxconn) lopen nog niet op volle capaciteit.'}
+    ],
+    // price history per period (monthly datapoints)
+    priceH:{
+      '1J':[193,202,198,212,226,242,254,259,264,261,270,277,280],
+      '6M':[254,259,257,264,261,270,277,276,279,278,280,280],
+      '3M':[264,261,270,274,275,277,276,279,278,280,280,280],
+      'YTD':[255,258,261,264,270,277,280,280]
+    },
+    // annotations per period (index into that period's array)
+    annH:{
+      '1J':[{i:2,c:'#f59e0b',l:'52w Laag'},{i:10,c:'#22c55e',l:'Q2 Beat'},{i:11,c:'#ef4444',l:'CEO Exit'}],
+      '6M':[{i:5,c:'#22c55e',l:'Q1 Record'},{i:10,c:'#ef4444',l:'CEO Exit'},{i:11,c:'#22c55e',l:'Q2 Beat'}],
+      '3M':[{i:4,c:'#22c55e',l:'Services ATH'},{i:10,c:'#ef4444',l:'CEO Exit'},{i:11,c:'#22c55e',l:'Q2 Beat'}],
+      'YTD':[{i:3,c:'#22c55e',l:'Q1 Record'},{i:6,c:'#ef4444',l:'CEO Exit'},{i:7,c:'#22c55e',l:'Q2 Beat'}]
+    },
+    dayChg:3.2, // daily % change
+    ytdChg:45,  // YTD %
+    next:'WWDC 9–13 jun 2026', nextIcon:'💻', nextColor:'#c0c0c0'
+  },
+  GOOGL:{
+    name:'Alphabet', full:'Alphabet Inc.', ticker:'GOOGL', exchange:'NASDAQ · USD', cur:'$',
+    price:393.64, chg:'+1,35%', chgNum:1.35, dir:'up',
+    color:'#4285f4', logoBg:'linear-gradient(135deg,#1a3a8f,#4285f4)', logoTxt:'G',
+    wkH:402.00, wkL:156.16,
+    ratios:{
+      'P/E (TTM)':'29,2×','P/E Fwd':'24,5×','EV/EBITDA':'17×',
+      'P/S':'7,8×','Brutomarge':'~59%','Bedrijfsmarge':'36,1%',
+      'ROE':'~32%','Schuld/Eigen V.':'0,05×','Vrije KS/aandeel':'~$8,20',
+      'Dividend Yield':'0,22%','Beta':'1,08','Mktcap':'$4,62T'
+    },
+    analysts:{
+      consensus:'Sterk Kopen', buy:46, hold:5, sell:0, total:51,
+      avgTarget:420, highTarget:465, lowTarget:275, current:382.37,
+      updates:[
+        {dir:'up',firm:'J.P. Morgan',action:'Verhoogt doel',from:'$415',to:'$460',rating:'Overweight',date:'30 apr 2026',note:'Post-Q1: Google Cloud +63% ver boven verwachting. Backlog verdubbeld naar $460B. Cloud-marge stijgt naar 32,9% — "structurele winstgevendheidsverschuiving".'},
+        {dir:'up',firm:'TD Cowen',action:'Verhoogt doel',from:'$420',to:'$450',rating:'Outperform',date:'30 apr 2026',note:'Cloud versnelling "onverwacht sterk". TPU hardware als nieuw inkomstenkanaal bevestigd door CEO. Pentagon AI-deal als lange-termijn groei-motor.'},
+        {dir:'up',firm:'Wells Fargo',action:'Verhoogt doel',from:'$387',to:'$427',rating:'Overweight',date:'30 apr 2026',note:'Search op ATH-volume ondanks AI-concurrenten bewijst moat. Waymo 500K ritten/week toont autonome monetisatiepotentie.'},
+        {dir:'up',firm:'Stifel (Mark Kelley)',action:'Verhoogt doel',from:'$387',to:'$420',rating:'Buy',date:'1 mei 2026',note:'"Top pick AI trade." Cloud-groei 63% ver boven 50% consensus. Alphabet positioneert zich als volledige AI-stack leverancier.'},
+        {dir:'up',firm:'Citigroup',action:'Verhoogt doel',from:'$420',to:'$447',rating:'Buy',date:'30 apr 2026',note:'Sterkste cloud-kwartaal ooit. Backlog near-doublement signaleert multi-jaar visibiliteit. DOJ-risico bekend en ingeprijsd.'}
+      ]
+    },
+    news:[
+      {badge:'nb-earn',bl:'EARNINGS · Q1 2026',date:'29 apr 2026',time:'22:00 CET',
+       title:'Alphabet Q1 2026 · Revenue $109,9B +22% · Cloud +63% · EPS $5,11 · Koers +10%',
+       body:'Alphabet leverde zijn <strong>11e opeenvolgende kwartaal met dubbele-cijfer groei</strong>. Revenue van $109,9B overtrof consensus van $107,2B. <strong>Google Cloud</strong> was de absolute ster: $20,0B (+63% YoY) vs. verwachting van $18,1B — de sterkste cloudgroei in de geschiedenis van het segment. Cloud-marge expandeerde spectaculair van 17,8% naar <strong>32,9%</strong> YoY. Cloud backlog verdubbelde bijna naar <strong>$462B</strong>. <strong>Search</strong> bereikte $60,4B (+19%), met query-volumes op all-time high. CEO Pichai: "We zijn compute constrained — onze Cloud-omzet had nog hoger kunnen zijn." EPS van $5,11 sloeg consensus van $2,63 (bevat $37B equity gain op participaties). Bedrijfsmarge: 36,1% (+200bp YoY). <strong>Waymo</strong> bereikte 500.000 autonome ritten per week in 11 steden.'},
+      {badge:'nb-risk',bl:'RISICO · ANTITRUST',date:'feb 2026',time:'',
+       title:'DOJ dient formeel antitrust beroep in · Search-distributiemodel in gevaar',
+       body:'Het US Department of Justice heeft in februari 2026 officieel beroep ingediend gericht op <strong>Google\'s Search-distributiemodel</strong>. Centraal staan de deals met Apple ($20B+/jaar) en Samsung om Google als standaardzoekmachine in te stellen. Mogelijke remedies: <strong>gedwongen verkoop van Chrome</strong>, verbod op standaard-zoekdeals, of structurele scheiding van Search en Ads. Analisten schatten de kans op gedwongen herstructurering op 20–35%. De $60,4B Search-omzet per kwartaal staat potentieel op het spel. Een definitief juridisch oordeel wordt niet voor 2027–2028 verwacht.'},
+      {badge:'nb-cat',bl:'KATALYSATOR · OVERHEID',date:'apr 2026',time:'',
+       title:'Pentagon integreert Gemini 3.1 Pro op militair netwerk · $40B Anthropic-deal',
+       body:'Het US Department of Defense maakte akkoorden bekend met Google en 6 andere AI-bedrijven voor inzet op <strong>GenAI.mil</strong>, het geclassificeerde militaire AI-platform. Google\'s Gemini-modellen worden ingezet voor analyse en beslissingsondersteuning. Bijkomend: Alphabet bevestigde een <strong>strategisch commitment van $40B aan Anthropic</strong> ($10B onmiddellijk, $30B voorwaardelijk), wat Google Cloud TPU-demand en AI-trainingscapaciteit versterkt. Analisten zien dit als belangrijke validatie van Google\'s volledige AI-stack.'},
+      {badge:'nb-cat',bl:'KATALYSATOR · WAYMO',date:'apr 2026',time:'',
+       title:'Waymo: 500.000 autonome ritten/week · 11 steden · $16B fundraise 2026',
+       body:'Waymo heeft zijn autonome rijdienst uitgebreid naar 11 US-steden en bereikt nu <strong>500.000 volledig autonome ritten per week</strong> — een verdubbeling in minder dan een jaar. In 2026 haalde Waymo <strong>$16 miljard op</strong> in een financieringsronde. Analisten schatten Waymo\'s stand-alone waarde op $30–75B. De divisie genereert nog geen significante winst maar bewijst technische volwassenheid. De overgang naar betaalde ritten in meer steden in H2 2026 is de volgende mijlpaal.'}
+    ],
+    priceH:{
+      '1J':[148,155,162,158,175,196,220,252,285,310,340,370,382],
+      '6M':[220,252,268,285,310,335,340,358,370,376,380,382],
+      '3M':[310,325,335,340,355,368,370,376,380,378,382,382],
+      'YTD':[305,318,340,355,368,376,380,382]
+    },
+    annH:{
+      '1J':[{i:3,c:'#ef4444',l:'DOJ'},{i:9,c:'#22c55e',l:'Cloud+63%'},{i:11,c:'#4285f4',l:'ATH'}],
+      '6M':[{i:2,c:'#4285f4',l:'DoD Deal'},{i:7,c:'#22c55e',l:'Anthr.$40B'},{i:11,c:'#22c55e',l:'ATH'}],
+      '3M':[{i:3,c:'#4285f4',l:'Waymo16B'},{i:7,c:'#22c55e',l:'Q1+22%'},{i:11,c:'#22c55e',l:'ATH'}],
+      'YTD':[{i:2,c:'#4285f4',l:'DOJ'},{i:5,c:'#22c55e',l:'Q1+63%'},{i:7,c:'#22c55e',l:'ATH'}]
+    },
+    dayChg:0.6,
+    ytdChg:23,
+    next:'Q2 Earnings late jul 2026', nextIcon:'☁️', nextColor:'#4285f4'
+  },
+  ACKB:{
+    name:'Ackermans', full:'Ackermans & Van Haaren NV', ticker:'ACKB', exchange:'Euronext BRU · EUR', cur:'€',
+    price:284.40, chg:'-2,97%', chgNum:-2.97, dir:'dn',
+    color:'#e8a020', logoBg:'linear-gradient(135deg,#7a3800,#e8a020)', logoTxt:'AVH',
+    wkH:352.09, wkL:197.10,
+    ratios:{
+      'P/E (TTM)':'~12×','P/BV':'~1,5×','EV/EBITDA':'~8×',
+      'Div. Rendement':'~2,0%','Nettowinst FY25':'€593M','Omzet FY25':'€5,96B',
+      'NAV Korting/Prem.':'~Prem. 5%','Winst/aandeel':'~€22','ROE':'~13%',
+      'Beta':'0,62','Mktcap':'~€4,3B','Analistdoel':'€296 gem.'
+    },
+    analysts:{
+      consensus:'Kopen', buy:4, hold:3, sell:0, total:7,
+      avgTarget:296, highTarget:340, lowTarget:224, current:274.80,
+      updates:[
+        {dir:'up',firm:'Berenberg',action:'Verhoogt doel',from:'€289',to:'€330',rating:'Buy',date:'mrt 2026',note:'DEME offshore wind pipeline en Delen Private Bank AuM-groei als hoofdcatalysatoren. FY2025 sterke outperformance bevestigt kwaliteit van participaties.'},
+        {dir:'hold',firm:'Kepler Cheuvreux',action:'Handhaaft Buy',from:'€280',to:'€285',rating:'Buy',date:'dec 2025',note:'Solide portefeuille van defensieve kwaliteitsbedrijven. DEME-afhankelijkheid blijft aandachtspunt maar orderboek record.'},
+        {dir:'hold',firm:'KBC Securities',action:'Handhaaft Accumuleren',from:'€270',to:'€275',rating:'Accumuleren',date:'nov 2025',note:'Bank Van Breda en Delen PB leveren stabiele bijdrage. SIPEF (tropische landbouw) cyclisch maar gehedged.'},
+        {dir:'hold',firm:'ING',action:'Handhaaft Hold',from:'€255',to:'€260',rating:'Hold',date:'sep 2025',note:'Koers reflecteert reeds de kwaliteit van de onderliggende participaties. Beperkt opgaand potentieel op korte termijn.'}
+      ]
+    },
+    news:[
+      {badge:'nb-earn',bl:'FY2025 RESULTATEN',date:'mrt 2026',time:'07:30 CET',
+       title:'AvH FY2025 · Nettowinst +29% naar €593M · DEME recordjaar · Dividendverhoging verwacht',
+       body:'Ackermans & Van Haaren rapporteerde <strong>uitstekende FY2025-resultaten</strong>. Geconsolideerde omzet daalde licht naar €5,96B (vs €6,04B vorig jaar) maar <strong>nettowinst sprong +29% naar €593M</strong>. Kernsegmenten: <strong>DEME</strong> (baggeren/offshore wind) leverde een recordjaar met stijgende offshore wind-marges via projecten als Nordsee One en Thor Wind Farm. <strong>Delen Private Bank</strong> behaalde zijn hoogste vermogen ooit onder beheer (AuM) terwijl <strong>Bank Van Breda</strong> uitstekende netto rente-inkomsten rapporteerde. SIPEF (palmolie/bananen) stabiel. AvH kondigde een dividendverhoging aan in lijn met de winstgroei.'},
+      {badge:'nb-cat',bl:'KATALYSATOR · DEME',date:'2026',time:'',
+       title:'DEME: Recordorderboek offshore wind · Thor, Hollandse Kust, Baltic Power',
+       body:'DEME\'s dochteronderneming heeft een <strong>record-orderboek</strong> opgebouwd voor offshore wind-installaties. Lopende en geplande projecten: <strong>Thor Wind Farm</strong> (Danmark, 2.000MW), <strong>Hollandse Kust Noord</strong> (Nederland), <strong>Baltic Power</strong> (Polen) en meerdere Foundation-installaties in het VK en Duitsland. Europa\'s ambitie om in 2030 300GW offshore wind te bereiken verzekert DEME van activiteit voor minstens 5–7 jaar. DEME heeft ook een leidende positie in <strong>offshore waterstof-infrastructuur</strong> — de volgende groeigolf.'},
+      {badge:'nb-cat',bl:'KATALYSATOR · BANKING',date:'2026',time:'',
+       title:'Delen Private Bank · AuM-groei + Bank Van Breda · Stabiele rentemarge',
+       body:'<strong>Delen Private Bank</strong> profiteert van de groeiende vermogensbeheersector in België en Nederland. AuM groeide naar een recordniveau in 2025. De bank richt zich exclusief op discretionair vermogensbeheer voor vermogende cliënten — een defensief en groeiend nichemodel. <strong>Bank Van Breda</strong> — actief voor vrije beroepen en ondernemers — haalde uitstekende nettorentemarge-cijfers, ook al normaliseren renteomgevingen. Beide entiteiten leveren stabiele, recurrente winstbijdragen aan AvH.'},
+      {badge:'nb-risk',bl:'RISICO',date:'2026',time:'',
+       title:'Geopolitieke blootstelling DEME · Belgische belastingdruk · Lage liquiditeit ACKB',
+       body:'DEME opereert actief in geopolitiek gevoelige regio\'s: Rode Zee (scheepvaartroutes), Perzische Golf (oliegasprojecten) en sommige Afrikaanse markten. <strong>Verstoringen door conflicten</strong> kunnen project-tijdlijnen beïnvloeden. Bijkomend: de <strong>Belgische vennootschapsbelasting</strong> en eventuele toekomstige vermogensbelasting kunnen de winst per aandeel drukken. ACKB heeft een relatief <strong>lage beursverhandelbaarheid</strong> (gemiddeld dagvolume ~€5M) wat institutionele in- en uitstap bemoeilijkt.'}
+    ],
+    priceH:{
+      '1J':[212,215,218,222,228,235,242,252,262,268,275,282,275],
+      '6M':[242,250,255,262,265,268,272,275,280,282,280,275],
+      '3M':[262,265,268,272,275,278,280,282,281,280,278,275],
+      'YTD':[255,260,265,270,275,280,278,275]
+    },
+    annH:{
+      '1J':[{i:5,c:'#22c55e',l:'H1 Sterk'},{i:9,c:'#22c55e',l:'FY25+29%'},{i:11,c:'#e8a020',l:'Brnbrg €330'}],
+      '6M':[{i:3,c:'#22c55e',l:'FY25+29%'},{i:7,c:'#e8a020',l:'Brnbrg €330'},{i:11,c:'#f59e0b',l:'Q1 20/5'}],
+      '3M':[{i:6,c:'#e8a020',l:'Brnbrg €330'},{i:11,c:'#f59e0b',l:'Q1 20/5'}],
+      'YTD':[{i:2,c:'#22c55e',l:'FY25+29%'},{i:5,c:'#e8a020',l:'Brnbrg €330'},{i:7,c:'#f59e0b',l:'Q1 20/5'}]
+    },
+    dayChg:-2.97,
+    ytdChg:8,
+    next:'Q1 Update 20 mei 2026', nextIcon:'🏗️', nextColor:'#e8a020'
+  },
+  SOF:{
+    name:'Sofina', full:'Sofina SA', ticker:'SOF', exchange:'Euronext BRU · EUR', cur:'€',
+    price:223.80, chg:'+1,02%', chgNum:1.02, dir:'up',
+    color:'#8b5cf6', logoBg:'linear-gradient(135deg,#3b0764,#8b5cf6)', logoTxt:'SOF',
+    wkH:285.20, wkL:203.60,
+    ratios:{
+      'NAV/aandeel':'€296','Korting op NAV':'−24%','Div. Rendement':'~1,5%',
+      'Portfolio FV':'€10,5B','% Digitaal':'35%','% Cons. Goods':'26%',
+      '% Gezondheidszorg':'12%','% W-Europa':'38,6%','% N-Amerika':'37,1%',
+      '% Azië':'24,3%','Beta':'0,55','Mktcap':'~€3,8B'
+    },
+    analysts:{
+      consensus:'Sterk Kopen', buy:4, hold:0, sell:0, total:4,
+      avgTarget:308, highTarget:315, lowTarget:290, current:223.80,
+      updates:[
+        {dir:'up',firm:'Kepler Cheuvreux',action:'Upgrade naar Buy',from:'€270',to:'€302',rating:'Buy',date:'mrt 2026',note:'Upgrade van Hold naar Buy. "Korting van >20% op NAV biedt aantrekkelijk instapmoment voor geduldig kapitaal." Verwacht herstel VC-waarderingen in H2 2026.'},
+        {dir:'hold',firm:'KBC Securities',action:'Handhaaft Accumuleren',from:'€295',to:'€300',rating:'Accumuleren',date:'jan 2026',note:'NAV stabiel op €296. Korting t.o.v. NAV historisch hoog. Tech-portfolio blootstelling (35% digital) profiteert van AI-rally 2026.'},
+        {dir:'hold',firm:'Degroof Petercam',action:'Handhaaft Kopen',from:'€310',to:'€315',rating:'Kopen',date:'feb 2026',note:'Portfolio van hoge kwaliteit. Lagere VC-waarderingen tijdelijk. Geografische diversificatie (VS, Europa, Azië) biedt bescherming.'},
+        {dir:'hold',firm:'ING',action:'Handhaaft Neutraal',from:'€285',to:'€290',rating:'Neutraal',date:'sep 2025',note:'Herstel private equity waarderingen zal tijd kosten. Korting op NAV gerechtvaardigd gegeven beperkte liquiditeit van underlying portfolio.'}
+      ]
+    },
+    news:[
+      {badge:'nb-earn',bl:'H2 2025 RESULTATEN',date:'jan 2026',time:'07:30 CET',
+       title:'Sofina H2 2025 · NAV/aandeel +1% naar €296 · Portfolio €10,5B · Korting blijft',
+       body:'Sofina rapporteerde <strong>voorzichtig positieve H2 2025-resultaten</strong>. NAV per aandeel steeg licht van €293 naar <strong>€296</strong> (+1%). De totale portfolio fair value bedraagt <strong>€10,5B</strong>. Verdeling: <strong>53,4% Sofina Direct</strong> (directe minderheidsbelangen in beursgenoteerde en niet-beursgenoteerde bedrijven) en <strong>46,6% Sofina Private Funds</strong> (VC/PE fondsen). Het digitale transformatiesegment (35% van portfolio) profiteert van de AI-rally. Consumptiegoederen (26%) en gezondheidszorg (12%) stabiel. De <strong>beurskorting ten opzichte van NAV</strong> blijft significant op ~24%, historisch hoog.'},
+      {badge:'nb-cat',bl:'KATALYSATOR · PORTFOLIO',date:'2026',time:'',
+       title:'AI-gedreven tech-rally helpt 35% digitaal portfolio · VC-markt toont herstel',
+       body:'Sofina\'s portfolio van <strong>35% in digitale transformatiebedrijven</strong> profiteert indirect van de AI-boom via hogere waarderingen bij groeibedrijven. Beursgenoteerde posities zoals <strong>Colruyt Group, Solvay en Amadeus IT</strong> presteren stabiel. In het VC-segment toont de markt tekenen van herstel na de correctie van 2022–2024. <strong>Nieuwe fondsstortingen</strong> in groeibedrijven in onderwijs (14%), gezondheidszorg (12%) en klimaattechnologie versterken het lange-termijn profiel. Geografisch geeft de sterke VS-markt (+37,1% van AuM) een positieve impuls via USD-appreciatie.'},
+      {badge:'nb-risk',bl:'RISICO · WAARDERING',date:'2026',time:'',
+       title:'Persistente korting op NAV · EUR/USD wisselkoers · Langzaam PE-herstel',
+       body:'Sofina\'s beurskoers handelt op een <strong>korting van ~24% ten opzichte van NAV</strong> (€223 vs €296 NAV). Dit is de hoogste kortingsgraad in 10 jaar. Voornaamste oorzaken: <strong>bezorgdheid over private equity waarderingen</strong> (exit-markten voor VC still moeizaam), beperkte dividenduitkering, en EUR-appreciatie die de waarde van USD-activa verlaagt. VC-fondsen die 46,6% van het portfolio uitmaken, zijn gewaardeerd op initiële kostprijs of laatste financieringsronde — mogelijke neerwaartse correcties bij exits.'},
+      {badge:'nb-corp',bl:'PORTFOLIO UPDATE',date:'jan 2026',time:'',
+       title:'Sofina investeert €22M in VKC Nuts (India) · €55M MRM Health Series B',
+       body:'Sofina breidt zijn internationale portfolio uit met twee recente investeringen. <strong>VKC Nuts Private Limited</strong> (India): €22M voor een belang in een leidend familiebedrijf in notenverwerking — past in de "sustainable supply chain" strategie. <strong>MRM Health</strong> (klinische biofarmaceutica): deelname aan een Series B financieringsronde van €55M voor een bedrijf dat werkt aan behandelingen voor kanker en genetische aandoeningen. Beide investeringen tonen Sofina\'s focus op defensieve, duurzame groeisectoren buiten pure tech.'}
+    ],
+    priceH:{
+      '1J':[285,278,272,268,260,248,240,235,228,224,220,218,224],
+      '6M':[240,237,232,228,225,222,220,219,218,219,222,224],
+      '3M':[225,224,222,221,220,219,218,218,219,220,222,224],
+      'YTD':[228,226,224,222,220,219,221,224]
+    },
+    annH:{
+      '1J':[{i:0,c:'#22c55e',l:'52w Hoog'},{i:9,c:'#8b5cf6',l:'NAV+1%'},{i:11,c:'#22c55e',l:'Kplr Buy'}],
+      '6M':[{i:3,c:'#8b5cf6',l:'NAV+1%'},{i:7,c:'#22c55e',l:'Kplr Buy'},{i:11,c:'#f59e0b',l:'H1 Update'}],
+      '3M':[{i:7,c:'#22c55e',l:'Kplr Buy'},{i:11,c:'#f59e0b',l:'H1 Update'}],
+      'YTD':[{i:3,c:'#8b5cf6',l:'NAV+1%'},{i:6,c:'#22c55e',l:'Kplr Buy'},{i:7,c:'#f59e0b',l:'H1 Update'}]
+    },
+    dayChg:-0.61,
+    ytdChg:-21,
+    next:'H1 2026 NAV Update', nextIcon:'📊', nextColor:'#8b5cf6'
+  },
+  IFX:{
+    name:'Infineon', full:'Infineon Technologies AG', ticker:'IFX', exchange:'XETRA · EUR', cur:'€',
+    price:60.57, chg:'+3,63%', chgNum:3.63, dir:'up',
+    color:'#22c55e', logoBg:'linear-gradient(135deg,#052e16,#22c55e)', logoTxt:'IFX',
+    wkH:62.08, wkL:30.82,
+    ratios:{
+      'P/E (TTM)':'72,6×','P/E Fwd':'~25×','EV/Sales':'~4,8×',
+      'Brutomarge':'39,4%','EBIT-marge':'~15%','FCF/aandeel':'€1,03',
+      'Schuld/Eigen V.':'0,49×','Dividend Yield':'~0,6%','RSI (14d)':'78,1',
+      'MFI':'88,4 (overbought)','Beta':'1,38','Mktcap':'€74,4B'
+    },
+    analysts:{
+      consensus:'Sterk Kopen', buy:21, hold:3, sell:0, total:24,
+      avgTarget:52, highTarget:67, lowTarget:43, current:58.07,
+      updates:[
+        {dir:'up',firm:'Morgan Stanley',action:'Verhoogt doel',from:'€54',to:'€58',rating:'Overweight',date:'27 apr 2026',note:'Automotive electrificatie herstel sterker dan verwacht. EV-orders hernemen in Europa en China. AI edge computing nieuwe groeivector voor IFX.'},
+        {dir:'up',firm:'Deutsche Bank',action:'Verhoogt doel',from:'€48',to:'€55',rating:'Buy',date:'apr 2026',note:'Industrial power control segment toont normalisatie na destocking-cyclus. Automotive segment bevestigt structurele elektrificatietrend.'},
+        {dir:'hold',firm:'Barclays',action:'Handhaaft Equal Weight',from:'€45',to:'€48',rating:'Equal Weight',date:'apr 2026',note:'Waardering al hoog na +100% rally. RSI 78 technisch overbought. Wacht op Q2-bevestiging van automotive recovery voor upgrade.'},
+        {dir:'up',firm:'Bernstein',action:'Verhoogt doel',from:'€52',to:'€60',rating:'Outperform',date:'mrt 2026',note:'Marktleider in automotive power semiconductors (SiC/GaN). EV-golf 2026–2030 fundamenteel intact. AI-infrastructuur als bonus.'},
+        {dir:'hold',firm:'UBS',action:'Handhaaft Neutraal',from:'€43',to:'€47',rating:'Neutraal',date:'jan 2026',note:'P/E 72× laat weinig marge voor teleurstelling. EV-adoptie kan vertragen. China-concurrentie van BYD-chips een opkomend risico.'}
+      ]
+    },
+    news:[
+      {badge:'nb-earn',bl:'Q2 FY2026 · VANDAAG',date:'6 mei 2026',time:'Na beurs · ~18:00 CET',
+       title:'Infineon Q2 FY2026 Earnings · VANDAAG · Automotief herstel en industrial recovery in focus',
+       body:'Infineon rapporteert <strong>vandaag na beurs (~18:00 CET)</strong> zijn Q2 FY2026 resultaten. Analistenconsensus: <strong>EPS €0,35</strong> (vs €0,33 verwacht) · <strong>Revenue ~€3,82B</strong>. Focus punten: <strong>(1) Automotive</strong> (~45% omzet): herstel EV-vraag in Europa en China na zwak H1 2025. Orders van Volkswagen, BMW en BYD voor next-gen power management chips. <strong>(2) Industrial Power Control</strong> (~25%): normalisering na destocking. Windenergie en industrie tonen herstel. <strong>(3) Power & Sensor Systems</strong> (~20%): AI-datacenter power delivery als groeiende niche. RSI van 78,1 en MFI van 88,4 wijzen op <strong>technisch overbought</strong> — mogelijke terugval als resultaten tegenvallen.'},
+      {badge:'nb-cat',bl:'KATALYSATOR · EV & AI',date:'2026',time:'',
+       title:'SiC-chips voor EV-motoren · AI-datacenter power delivery · Zone Controller partnership',
+       body:'Infineon is <strong>marktleider in Silicon Carbide (SiC) power chips</strong> voor elektrische voertuigen. Elk EV vereist 10–20 SiC MOSFET-modules voor motoraandrijving, laden en remenergieterugwinning. De SiC-markt groeit van $2B (2024) naar geschat $8B (2028). Bijkomend: <strong>AI-datacenters</strong> vereisen steeds grotere power management-oplossingen — racks met 120–150kW tegenover 10–15kW in 2023. Infineon levert de power management-chips voor deze hyperscaler-racks. Partnership met <strong>Flex voor Zone Controller Development Kit</strong> positioneert IFX in software-defined voertuigen.'},
+      {badge:'nb-risk',bl:'RISICO · WAARDERING & CYCLISCH',date:'2026',time:'',
+       title:'P/E 72× laat weinig marge · RSI 78 overbought · EV-adoptie kan vertragen',
+       body:'Na een <strong>+100% rally in 52 weken</strong> handelt Infineon op een forward P/E van ~25× en trailing P/E van 72×. <strong>RSI van 78,1</strong> en Stochastische oscillator van 91,74 wijzen op technisch overbought. Het aandeel nadert zijn <strong>52-weeks hoog van €58,28</strong>. Risico\'s: (1) <strong>Chinese concurrentie</strong> — BYD en CATL ontwikkelen eigen power chips, wat de lange-termijn SiC-markt kan verdelen. (2) <strong>EV-adoptie vertraging</strong> — Q1 2025 toonde een tijdelijke marktverzwakking. (3) <strong>Halvering van destocking</strong> als industrial klanten nog niet volledig terug zijn. Q2-earnings vandaag zijn een kritische test voor het koersniveau.'},
+      {badge:'nb-cat',bl:'KATALYSATOR · PARTNERSHIPS',date:'jan 2026',time:'',
+       title:'HL Klemove strategisch akkoord · ADAS chips voor autonoom rijden',
+       body:'Infineon sloot een <strong>strategisch akkoord met HL Klemove</strong> (Hyundai/Kia dochteronderneming) voor levering van radar- en LIDAR-verwerking-chips voor <strong>Advanced Driver Assistance Systems (ADAS)</strong>. Dit positioneert Infineon in het snelgroeiende autonoom-rijden segment naast zijn traditionele power-management markt. Bijkomend: Infineon\'s <strong>AURIX microcontrollers</strong> zijn al standaard in >50% van alle EV-platforms. De combinatie van power management + veiligheidschips maakt IFX tot een one-stop-shop voor automotive OEMs.'}
+    ],
+    priceH:{
+      '1J':[29,30,29,31,33,36,40,44,48,52,54,56,58],
+      '6M':[40,42,44,46,48,50,52,53,55,56,57,58],
+      '3M':[48,49,50,52,53,54,55,56,56.5,57,57.5,58],
+      'YTD':[38,41,44,48,52,55,57,58]
+    },
+    annH:{
+      '1J':[{i:2,c:'#ef4444',l:'52w Laag'},{i:7,c:'#22c55e',l:'EV Herstel'},{i:12,c:'#f59e0b',l:'Q2 Vandaag'}],
+      '6M':[{i:4,c:'#22c55e',l:'MS €58 doel'},{i:11,c:'#f59e0b',l:'Q2 Vandaag'}],
+      '3M':[{i:6,c:'#22c55e',l:'MS €58 doel'},{i:11,c:'#f59e0b',l:'Q2 Vandaag'}],
+      'YTD':[{i:3,c:'#22c55e',l:'EV Herstel'},{i:7,c:'#f59e0b',l:'Q2 Vandaag'}]
+    },
+    dayChg:2.57,
+    ytdChg:48.8,
+    next:'Q2 Earnings VANDAAG ~18:00', nextIcon:'🔴', nextColor:'#22c55e'
+  }
+};
+
+// ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
+const SB_URL = 'https://jaawhaevkzoomocvwpuf.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphYXdoYWV2a3pvb21vY3Z3cHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NTcxMDMsImV4cCI6MjA5NDEzMzEwM30.mjgkERxRpE6GfXsPqw0ij6D756QUnQTIbTZxMNbtctc';
+const SB_HEADERS = {
+  'apikey':        SB_KEY,
+  'Authorization': 'Bearer ' + SB_KEY,
+  'Content-Type':  'application/json',
+  'Accept':        'application/json'
+};
+
+async function sbGet(table, params='') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
+    method:  'GET',
+    headers: SB_HEADERS
+  });
+  if (!r.ok) throw new Error(`GET ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+
+async function sbUpsert(table, rows) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+    method:  'POST',
+    headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body:    JSON.stringify(rows)
+  });
+  if (!r.ok) throw new Error(`UPSERT ${r.status}: ${await r.text()}`);
+}
+
+// ─── POSITIONS & TICKERS (dynamic — loaded from Supabase) ────────────────────
+let positions = {};
+let activeStock='AAPL', activePage='overview', ovMode='rendement', chartPeriod='1J';
+let dbReady = false;
+
+// Default stock metadata (static info, prices overwritten by live fetch)
+const STOCK_META = {
+  AAPL: { name:'Apple',    full:'Apple Inc.',              color:'#c0c0c0', logoBg:'linear-gradient(135deg,#3a3a3a,#a0a0a0)', logoTxt:'AAPL', cur:'$', exchange:'NASDAQ' },
+  GOOGL:{ name:'Alphabet', full:'Alphabet Inc.',           color:'#4285f4', logoBg:'linear-gradient(135deg,#1a3a8f,#4285f4)', logoTxt:'G',    cur:'$', exchange:'NASDAQ' },
+  ACKB: { name:'Ackermans',full:'Ackermans & Van Haaren',  color:'#e8a020', logoBg:'linear-gradient(135deg,#7a3800,#e8a020)', logoTxt:'AVH',  cur:'€', exchange:'Euronext BRU' },
+  SOF:  { name:'Sofina',   full:'Sofina SA',               color:'#8b5cf6', logoBg:'linear-gradient(135deg,#3b0764,#8b5cf6)', logoTxt:'SOF',  cur:'€', exchange:'Euronext BRU' },
+  IFX:  { name:'Infineon', full:'Infineon Technologies AG',color:'#22c55e', logoBg:'linear-gradient(135deg,#052e16,#22c55e)', logoTxt:'IFX',  cur:'€', exchange:'XETRA' },
+};
+
+// Live price cache — filled by fetchLivePrices()
+let liveData = {};  // { AAPL: { price, chg, chgNum, dir, wkH, wkL, pe, mktcap, analystLow, analystMid, analystHigh, analystCount, ... } }
+
+// ─── YAHOO FINANCE — MULTI-PROXY FALLBACK ────────────────────────────────────
+// ─── FINNHUB API CONFIG ───────────────────────────────────────────────────────
+const FH_KEY  = 'd81im41r01qrojfbo940d81im41r01qrojfbo94g';
+const FH_BASE = 'https://finnhub.io/api/v1';
+
+// Finnhub symbolen — Europese aandelen: EXCHANGE:TICKER
+const FH_SYMBOL = {
+  AAPL:  'AAPL',
+  GOOGL: 'GOOGL',
+  ACKB:  'EURONEXT:AKA',
+  SOF:   'EURONEXT:SOF',
+  IFX:   'XETRA:IFX',
+};
+
+// ─── QUOTE OPHALEN (1 per ticker, parallel) ──────────────────────────────────
+async function fetchQuote(fhSym) {
+  const r = await fetch(
+    `${FH_BASE}/quote?symbol=${encodeURIComponent(fhSym)}&token=${FH_KEY}`,
+    { signal: AbortSignal.timeout(8000) }
+  );
+  if (!r.ok) throw new Error(`Finnhub ${r.status}`);
+  const d = await r.json();
+  // Finnhub returns {c: price, h: high, l: low, o: open, pc: prevClose, d: change, dp: changePct, t: timestamp}
+  if (!d || d.c === 0) throw new Error('Geen data');
+  return d;
+}
+
+async function fetchProfile(fhSym) {
+  try {
+    const r = await fetch(
+      `${FH_BASE}/stock/profile2?symbol=${encodeURIComponent(fhSym)}&token=${FH_KEY}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!r.ok) return null;
+    return r.json();
+  } catch(e) { return null; }
+}
+
+async function fetchMetrics(fhSym) {
+  try {
+    const r = await fetch(
+      `${FH_BASE}/stock/metric?symbol=${encodeURIComponent(fhSym)}&metric=all&token=${FH_KEY}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!r.ok) return null;
+    return r.json();
+  } catch(e) { return null; }
+}
+
+async function fetchRecommendation(fhSym) {
+  try {
+    const r = await fetch(
+      `${FH_BASE}/stock/recommendation?symbol=${encodeURIComponent(fhSym)}&token=${FH_KEY}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!r.ok) return null;
+    const arr = await r.json();
+    return Array.isArray(arr) && arr.length ? arr[0] : null;
+  } catch(e) { return null; }
+}
+
+async function fetchPriceTarget(fhSym) {
+  try {
+    const r = await fetch(
+      `${FH_BASE}/stock/price-target?symbol=${encodeURIComponent(fhSym)}&token=${FH_KEY}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!r.ok) return null;
+    return r.json();
+  } catch(e) { return null; }
+}
+
+// ─── ALLE LIVE PRIJZEN OPHALEN ────────────────────────────────────────────────
+async function fetchLivePrices() {
+  const tickers = Object.keys(STOCKS);
+  let anySuccess = false;
+
+  await Promise.allSettled(tickers.map(async t => {
+    const fhSym = FH_SYMBOL[t] || t;
+    try {
+      // Parallel: quote + metrics + recommendation + price target
+      const [quote, metrics, rec, target] = await Promise.all([
+        fetchQuote(fhSym),
+        fetchMetrics(fhSym),
+        fetchRecommendation(fhSym),
+        fetchPriceTarget(fhSym),
+      ]);
+
+      if (!quote || quote.c === 0) return;
+
+      const price   = quote.c;
+      const chgAbs  = quote.d  ?? 0;
+      const chgPct  = quote.dp ?? 0;   // Finnhub geeft % als getal (bv. 1.35)
+      const wkH     = metrics?.metric?.['52WeekHigh'] ?? STOCKS[t].wkH;
+      const wkL     = metrics?.metric?.['52WeekLow']  ?? STOCKS[t].wkL;
+      const pe      = metrics?.metric?.peBasicExclExtraTTM;
+      const eps     = metrics?.metric?.epsBasicExclExtraAnnual;
+      const beta    = metrics?.metric?.beta;
+      const divY    = metrics?.metric?.currentDividendYieldTTM;
+      const roe     = metrics?.metric?.roeTTM;
+      const grossM  = metrics?.metric?.grossMarginTTM;
+      const mktcap  = metrics?.metric?.marketCapitalization;
+
+      const mktcapFmt = mktcap
+        ? (mktcap > 1e6  ? (mktcap/1e6).toFixed(1)+'T'
+         : mktcap > 1e3  ? (mktcap/1e3).toFixed(1)+'B'
+         :                  mktcap.toFixed(0)+'M')
+        : '—';
+
+      const daysUp  = chgAbs >= 0 ? 'up' : 'dn';
+      const pctStr  = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
+      const cur     = STOCKS[t].cur;
+
+      // Patch STOCKS
+      STOCKS[t].price  = price;
+      STOCKS[t].chg    = pctStr;
+      STOCKS[t].chgNum = chgPct;
+      STOCKS[t].dir    = daysUp;
+      STOCKS[t].wkH    = wkH;
+      STOCKS[t].wkL    = wkL;
+
+      STOCKS[t].ratios = {
+        ...STOCKS[t].ratios,
+        'P/E (TTM)': pe    ? pe.toFixed(1)+'×'          : (STOCKS[t].ratios?.['P/E (TTM)'] ?? '—'),
+        'EPS':       eps   ? cur+eps.toFixed(2)          : '—',
+        'Beta':      beta  ? beta.toFixed(2)             : (STOCKS[t].ratios?.['Beta'] ?? '—'),
+        'Div. Yield':divY  ? (divY*100).toFixed(2)+'%'  : (STOCKS[t].ratios?.['Div. Yield'] ?? '—'),
+        'Brutomarge':grossM? (grossM*100).toFixed(1)+'%': '—',
+        'ROE':       roe   ? (roe).toFixed(1)+'%'        : '—',
+        'Mktcap':    mktcapFmt,
+        '52w Laag':  cur + (wkL?.toFixed(2) ?? '—'),
+        '52w Hoog':  cur + (wkH?.toFixed(2) ?? '—'),
+        'Dag Hoog':  cur + (quote.h?.toFixed(2) ?? '—'),
+        'Dag Laag':  cur + (quote.l?.toFixed(2)  ?? '—'),
+      };
+
+      // Analyst data
+      if (STOCKS[t].analysts) {
+        if (target?.targetHigh)  STOCKS[t].analysts.highTarget = Math.round(target.targetHigh);
+        if (target?.targetMean)  STOCKS[t].analysts.avgTarget  = Math.round(target.targetMean);
+        if (target?.targetLow)   STOCKS[t].analysts.lowTarget  = Math.round(target.targetLow);
+        if (rec) {
+          const buy  = (rec.strongBuy  ?? 0) + (rec.buy  ?? 0);
+          const hold = rec.hold  ?? 0;
+          const sell = (rec.strongSell ?? 0) + (rec.sell ?? 0);
+          const tot  = buy + hold + sell;
+          if (tot > 0) {
+            STOCKS[t].analysts.buy   = buy;
+            STOCKS[t].analysts.hold  = hold;
+            STOCKS[t].analysts.sell  = sell;
+            STOCKS[t].analysts.total = tot;
+            STOCKS[t].analysts.consensus =
+              buy/tot > 0.6  ? 'Sterk Kopen'
+            : buy/tot > 0.4  ? 'Kopen'
+            : sell/tot > 0.4 ? 'Verkopen'
+            :                  'Houden';
+          }
+        }
+      }
+
+      liveData[t] = { price, chgAbs, chgPct, dir: daysUp };
+      anySuccess  = true;
+
+    } catch(e) {
+      console.warn(`Finnhub mislukt voor ${t} (${fhSym}):`, e.message);
+    }
+  }));
+
+  return anySuccess;
+}
+
+// addTicker zoekt ook via Finnhub
+async function fetchAllQuotes(tickers) {
+  // Wrapper voor compatibiliteit met addTicker
+  const out = {};
+  await Promise.allSettled(tickers.map(async t => {
+    const fhSym = FH_SYMBOL[t] || t;
+    try {
+      const [q, p] = await Promise.all([fetchQuote(fhSym), fetchProfile(fhSym)]);
+      out[t] = { price: q?.c, name: p?.name, exchange: p?.exchange, currency: p?.currency };
+    } catch(e) { out[t] = { error: e.message }; }
+  }));
+  return out;
+}
+
+// ─── AUTO REFRESH (every 5 min) ──────────────────────────────────────────────
+let refreshTimer = null;
+let lastRefresh  = null;
+
+async function refreshPrices(silent=false) {
+  if (!silent) showDbStatus('🔄 Koersen ophalen...', 'orange');
+  try {
+    const ok = await fetchLivePrices();
+    lastRefresh = new Date();
+    updateRefreshBadge();
+    renderSummary(); renderOverview();
+    if (activePage === 'detail') { buildTabs(); renderDetail(activeStock); }
+    if (!silent && ok) showDbStatus('✓ Koersen bijgewerkt', 'green');
+    if (!silent && !ok) showDbStatus('⚠️ Koersen ophalen deels mislukt', 'orange');
+  } catch(e) {
+    if (!silent) showDbStatus('⚠️ Koersen ophalen mislukt', 'orange');
+  }
+}
+
+function updateRefreshBadge() {
+  const el = document.querySelector('.live-badge');
+  if (!el) return;
+  if (!lastRefresh) { el.innerHTML = '<div class="live-dot"></div>LIVE'; return; }
+  const mins = Math.floor((Date.now() - lastRefresh) / 60000);
+  const txt  = mins === 0 ? 'LIVE' : `${mins}m geleden`;
+  el.innerHTML = `<div class="live-dot"></div>${txt}`;
+}
+
+function startAutoRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    refreshPrices(true);
+    updateRefreshBadge();
+  }, 5 * 60 * 1000); // every 5 min
+  // Also update the badge every 30s so the "Xm geleden" stays accurate
+  setInterval(updateRefreshBadge, 30000);
+}
+
+function showSetupInstructions() {
+  const el = document.getElementById('db-status-banner');
+  if (el) el.style.display = 'block';
+}
+
+function showDbStatus(msg, type='green') {
+  const colors = { green:'var(--green)', orange:'var(--orange)', red:'var(--red)' };
+  const toast = document.createElement('div');
+  toast.style.cssText = `position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid ${colors[type]};color:${colors[type]};font-family:var(--mono);font-size:11px;padding:8px 18px;border-radius:20px;z-index:999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4);`;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// ─── DB SETUP: verify table exists ────────────────────────────────────────────
+async function ensureTable() {
+  try {
+    await sbGet('portfolio_positions', 'select=ticker&limit=1');
+    dbReady = true;
+  } catch(e) {
+    console.warn('Table check failed:', e.message);
+    showSetupInstructions();
+  }
+}
+
+// ─── LOAD POSITIONS FROM SUPABASE ─────────────────────────────────────────────
+// loadPositions is now handled by loadTickersFromDB above
+async function loadPositions() { return loadTickersFromDB(); }
+
+// ─── SAVE POSITIONS TO SUPABASE ───────────────────────────────────────────────
+async function saveToSupabase() {
+  const rows = Object.keys(STOCKS).map(t => ({
+    ticker:     t,
+    qty:        positions[t].qty,
+    avg_cost:   positions[t].avgCost,
+    updated_at: new Date().toISOString()
+  }));
+  await sbUpsert('portfolio_positions', rows);
+  localStorage.setItem('pf_pos_v2', JSON.stringify(positions));
+}
+
+// ─── CALCULATIONS ─────────────────────────────────────────────────────────────
+function calcPnL(t){
+  const s=STOCKS[t],p=positions[t];
+  if(!p||p.qty<=0) return null;
+  const cur=p.qty*s.price,cost=p.qty*p.avgCost,pnl=cur-cost,pct=cost>0?(pnl/cost*100):0;
+  return {cur,cost,pnl,pct,qty:p.qty,avg:p.avgCost};
+}
+function calcTotal(){
+  let tv=0,tc=0,any=false;
+  Object.keys(STOCKS).forEach(t=>{const r=calcPnL(t);if(r){tv+=r.cur;tc+=r.cost;any=true;}});
+  return any?{tv,tc,pnl:tv-tc,pct:tc>0?(tv-tc)/tc*100:0}:null;
+}
+function fmtN(n,cur='€',d=0){return cur+Math.abs(n).toLocaleString('nl-BE',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function fmtPct(n){return (n>=0?'+':'')+n.toFixed(2)+'%';}
+function fmtQty(n){
+  // Show up to 6 decimals, strip trailing zeros
+  if(n===0) return '0';
+  if(Number.isInteger(n)) return n.toLocaleString('nl-BE');
+  // format with up to 6 decimals, remove trailing zeros
+  return parseFloat(n.toFixed(6)).toLocaleString('nl-BE',{maximumFractionDigits:6});
+}
+function clr(n){return n>=0?'var(--green)':'var(--red)';}
+function cls(n){return n>=0?'g':'r';}
+
+// ─── SPARKLINE ────────────────────────────────────────────────────────────────
+function sparkSVG(pts,color,w=280,h=40,anns=[]){
+  const mn=Math.min(...pts),mx=Math.max(...pts);
+  const sx=i=>(i/(pts.length-1))*(w-4)+2;
+  const sy=v=>h-2-((v-mn)/(mx-mn||1))*(h-4);
+  const pd=pts.map((v,i)=>`${i===0?'M':'L'}${sx(i)},${sy(v)}`).join(' ');
+  const ad=pd+` L${sx(pts.length-1)},${h} L2,${h} Z`;
+  const id='sg'+Math.random().toString(36).slice(2,7);
+  const annSVG=anns.map(a=>{
+    const x=sx(a.i),y=sy(pts[a.i]);
+    return `<circle cx="${x}" cy="${y}" r="4" fill="${a.c}" opacity=".9"/>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".25"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${ad}" fill="url(#${id})"/><path d="${pd}" fill="none" stroke="${color}" stroke-width="1.8"/>${annSVG}</svg>`;
+}
+
+// ─── SUMMARY ──────────────────────────────────────────────────────────────────
+function renderSummary(){
+  const tot=calcTotal();
+  const te=document.getElementById('ph-total');
+  const be=document.getElementById('ph-pnl');
+  const pe=document.getElementById('ph-pct');
+  if(!tot){te.textContent='—';te.style.color='var(--muted)';be.className='ph-pnl ne';be.textContent='⚙️ Voer posities in';pe.textContent='';}
+  else{
+    const up=tot.pnl>=0;
+    te.textContent=fmtN(tot.tv,'€',0);te.style.color=clr(tot.pnl);
+    be.className='ph-pnl '+(up?'up':'dn');
+    be.textContent=(up?'▲ +':'▼ ')+fmtN(Math.abs(tot.pnl),'€',0);
+    pe.textContent=fmtPct(tot.pct);pe.style.color=clr(tot.pnl);
+  }
+}
+
+// ─── OVERVIEW MODE ────────────────────────────────────────────────────────────
+function setOvMode(mode, el){
+  ovMode=mode;
+  document.querySelectorAll('.ovt').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  renderOverview();
+}
+
+function renderOverview(){
+  const ANNS_MAP={
+    AAPL:[{i:2,c:'#f59e0b'},{i:10,c:'#22c55e'},{i:11,c:'#ef4444'}],
+    GOOGL:[{i:3,c:'#ef4444'},{i:9,c:'#22c55e'},{i:11,c:'#4285f4'}],
+    ACKB:[{i:5,c:'#22c55e'},{i:9,c:'#22c55e'},{i:11,c:'#e8a020'}],
+    SOF:[{i:0,c:'#22c55e'},{i:9,c:'#8b5cf6'},{i:11,c:'#22c55e'}],
+    IFX:[{i:2,c:'#ef4444'},{i:7,c:'#22c55e'},{i:12,c:'#f59e0b'}]
+  };
+
+  document.getElementById('ov-list').innerHTML=Object.keys(STOCKS).map(t=>{
+    const s=STOCKS[t], pnl=calcPnL(t), up=s.dir==='up';
+    const pts=s.priceH['1J'];
+    const spark=sparkSVG(pts,s.color,320,36,ANNS_MAP[t]||[]);
+
+    // ── Build bottom metrics block based on mode ──
+    let bottomBlock='';
+
+    if(ovMode==='rendement'){
+      if(pnl){
+        const pnlUp=pnl.pnl>=0;
+        bottomBlock=`<div class="ov-rend-row">
+          <div class="ovr-cell"><div class="ovr-l">Stuks · Koop</div><div class="ovr-v">${fmtQty(pnl.qty)} · ${s.cur}${pnl.avg.toFixed(2)}</div></div>
+          <div class="ovr-cell"><div class="ovr-l">Huidige Waarde</div><div class="ovr-v">${fmtN(pnl.cur,s.cur,0)}</div></div>
+          <div class="ovr-cell"><div class="ovr-l">Mijn P&L</div><div class="ovr-v ${cls(pnl.pnl)}">${pnl.pnl>=0?'+':''}${fmtN(pnl.pnl,s.cur,0)}<br><span style="font-size:10px;">${fmtPct(pnl.pct)}</span></div></div>
+        </div>`;
+      } else {
+        bottomBlock=`<div class="ov-no-pos">⚙️ Tik ⚙️ om positie in te voeren</div>`;
+      }
+    } else if(ovMode==='dag'){
+      const dc=s.dayChg;
+      const dayVal=pnl ? (pnl.qty * s.price * dc/100) : null;
+      bottomBlock=`<div class="ov-rend-row">
+        <div class="ovr-cell"><div class="ovr-l">Dag %</div><div class="ovr-v ${cls(dc)}">${fmtPct(dc)}</div></div>
+        <div class="ovr-cell"><div class="ovr-l">Dag Koers Δ</div><div class="ovr-v ${cls(dc)}">${s.cur}${(s.price*(1-dc/100)).toFixed(2)} → ${s.cur}${s.price.toFixed(2)}</div></div>
+        <div class="ovr-cell"><div class="ovr-l">Mijn Dag P&L</div><div class="ovr-v ${dayVal!==null?cls(dayVal):''}">
+          ${dayVal!==null?(dayVal>=0?'+':'')+fmtN(Math.abs(dayVal),s.cur,0):'—'}
+        </div></div>
+      </div>`;
+    } else if(ovMode==='52w'){
+      const wkPct=((s.price-s.wkL)/(s.wkH-s.wkL)*100).toFixed(0);
+      const v52=pnl ? null : null; // We show 52w stats, not position-based
+      bottomBlock=`<div class="ov-rend-row">
+        <div class="ovr-cell"><div class="ovr-l">52w Laag</div><div class="ovr-v r">${s.cur}${s.wkL}</div></div>
+        <div class="ovr-cell"><div class="ovr-l">52w Hoog</div><div class="ovr-v g">${s.cur}${s.wkH}</div></div>
+        <div class="ovr-cell"><div class="ovr-l">52w Rendement</div><div class="ovr-v ${cls(s.chgNum)}">${fmtPct(s.chgNum)}</div></div>
+      </div>`;
+    } else if(ovMode==='ytd'){
+      const ytd=s.ytdChg;
+      const ytdVal=pnl?(pnl.cur-(pnl.qty*s.price/(1+ytd/100))):null;
+      bottomBlock=`<div class="ov-rend-row">
+        <div class="ovr-cell"><div class="ovr-l">YTD 2026</div><div class="ovr-v ${cls(ytd)}">${fmtPct(ytd)}</div></div>
+        <div class="ovr-cell"><div class="ovr-l">Koers 1/1/26</div><div class="ovr-v">${s.cur}${(s.price/(1+ytd/100)).toFixed(2)}</div></div>
+        <div class="ovr-cell"><div class="ovr-l">Mijn YTD P&L</div><div class="ovr-v ${ytdVal!==null?cls(ytdVal):''}">
+          ${ytdVal!==null?(ytdVal>=0?'+':'')+fmtN(Math.abs(ytdVal),s.cur,0):'—'}
+        </div></div>
+      </div>`;
+    } else if(ovMode==='markt'){
+      const an=s.analysts;
+      const upside=((an.avgTarget-s.price)/s.price*100);
+      bottomBlock=`<div class="ov-rend-row">
+        <div class="ovr-cell"><div class="ovr-l">Consensus</div><div class="ovr-v" style="font-size:11px;">${an.consensus}</div></div>
+        <div class="ovr-cell"><div class="ovr-l">Gem. Doel</div><div class="ovr-v ${cls(upside)}">${s.cur}${an.avgTarget}</div></div>
+        <div class="ovr-cell"><div class="ovr-l">Upside</div><div class="ovr-v ${cls(upside)}">${fmtPct(upside)}</div></div>
+      </div>`;
+    }
+
+    return `<div class="ov-card" onclick="goDetail('${t}')">
+      <div class="ov-stripe" style="background:${s.color};"></div>
+      <div class="ov-top" style="padding-left:20px;">
+        <div class="ov-logo" style="background:${s.logoBg};">${s.logoTxt}</div>
+        <div class="ov-info"><div class="ov-name">${s.name}</div><div class="ov-ticker">${s.ticker} · ${s.exchange}</div></div>
+        <div class="ov-price-block">
+          <div class="ov-price" style="color:${s.color};">${s.cur}${s.price.toLocaleString('nl-BE',{minimumFractionDigits:2})}</div>
+          <div class="ov-chg ${up?'up':'dn'}">${s.chg}</div>
+        </div>
+      </div>
+      <div class="ov-spark">${spark}</div>
+      ${bottomBlock}
+    </div>`;
+  }).join('');
+}
+
+// ─── DETAIL ───────────────────────────────────────────────────────────────────
+function buildTabs(){
+  document.getElementById('stock-tabs').innerHTML=Object.keys(STOCKS).map(t=>{
+    const s=STOCKS[t],up=s.dir==='up';
+    return `<div class="stab ${t===activeStock?'active':''}" style="--tc:${s.color};" onclick="setStock('${t}')">
+      <div class="stab-dot" style="background:${s.color};"></div>
+      <span class="stab-ticker" style="color:${s.color};">${t}</span>
+      <span class="stab-chg ${up?'up':'dn'}">${s.chg}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── CHART PERIOD LABELS ──────────────────────────────────────────────────────
+const PERIOD_LABELS={
+  '1J':['Mei\'25','Aug\'25','Nov\'25','Feb\'26','Mei\'26'],
+  '6M':['Nov\'25','Dec\'25','Jan\'26','Feb\'26','Mrt\'26','Mei\'26'],
+  '3M':['Feb\'26','Mrt\'26','Apr\'26','Mei\'26'],
+  'YTD':['Jan\'26','Feb\'26','Mrt\'26','Apr\'26','Mei\'26']
+};
+
+function renderChart(ticker, period){
+  const s=STOCKS[ticker];
+  const pts=s.priceH[period];
+  const anns=(s.annH||{})[period]||[];
+  const W=800,H=110,pad=8;
+  const mn=Math.min(...pts),mx=Math.max(...pts);
+  const sx=i=>(i/(pts.length-1))*(W-2*pad)+pad;
+  const sy=v=>H-pad-((v-mn)/(mx-mn||1))*(H-2*pad);
+  const pathD=pts.map((v,i)=>`${i===0?'M':'L'}${sx(i)},${sy(v)}`).join(' ');
+  const areaD=pathD+` L${sx(pts.length-1)},${H} L${pad},${H} Z`;
+  const gId='dg'+ticker+period;
+  const annSVG=anns.map(a=>{
+    const ai=Math.min(a.i,pts.length-1);
+    const x=sx(ai),y=sy(pts[ai]),above=y>H/2;
+    const ly2=above?Math.max(pad+14,y-30):Math.min(H-pad,y+30);
+    return `<circle cx="${x}" cy="${y}" r="5" fill="${a.c}" opacity=".9"/>
+      <line x1="${x}" y1="${y+(above?-5:5)}" x2="${x}" y2="${ly2}" stroke="${a.c}" stroke-width="1" stroke-dasharray="3,2" opacity=".7"/>
+      <rect x="${Math.min(Math.max(x-24,2),W-50)}" y="${above?ly2-13:ly2+1}" width="48" height="13" rx="3" fill="#121521" stroke="${a.c}" stroke-width=".8"/>
+      <text x="${Math.min(Math.max(x,26),W-26)}" y="${above?ly2-3:ly2+11}" font-family="JetBrains Mono" font-size="9" fill="${a.c}" text-anchor="middle" font-weight="600">${a.l}</text>`;
+  }).join('');
+
+  const periodChg=((pts[pts.length-1]-pts[0])/pts[0]*100);
+  const pLabels=PERIOD_LABELS[period]||[];
+  const labelsHtml=pLabels.map(l=>`<span>${l}</span>`).join('');
+
+  // Stats row
+  const pnl=calcPnL(ticker);
+  const periodValChg=pnl?(pnl.qty*s.price - pnl.qty*s.price/(1+periodChg/100)):null;
+  const chartStatsHtml=`<div class="chart-stat-row">
+    <div class="cs-box"><div class="cs-lbl">Periode Chg</div><div class="cs-val ${cls(periodChg)}">${fmtPct(periodChg)}</div></div>
+    <div class="cs-box"><div class="cs-lbl">${period} Laag</div><div class="cs-val">${s.cur}${Math.min(...pts).toFixed(2)}</div></div>
+    <div class="cs-box"><div class="cs-lbl">${period} Hoog</div><div class="cs-val">${s.cur}${Math.max(...pts).toFixed(2)}</div></div>
+    ${periodValChg!==null?`<div class="cs-box"><div class="cs-lbl">Mijn P&L ${period}</div><div class="cs-val ${cls(periodValChg)}">${periodValChg>=0?'+':''}${fmtN(Math.abs(periodValChg),s.cur,0)}</div></div>`:''}
+  </div>`;
+
+  return {
+    svgHtml:`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="overflow:visible;">
+      <defs><linearGradient id="${gId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${s.color}" stop-opacity=".3"/><stop offset="100%" stop-color="${s.color}" stop-opacity="0"/></linearGradient>
+      <filter id="gl${ticker}"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <path d="${areaD}" fill="url(#${gId})"/>
+      <path d="${pathD}" fill="none" stroke="${s.color}" stroke-width="2.5" filter="url(#gl${ticker})"/>
+      ${annSVG}
+    </svg>`,
+    labelsHtml,
+    chartStatsHtml
+  };
+}
+
+function setPeriod(period, el){
+  chartPeriod=period;
+  // update active tab styling
+  document.querySelectorAll('.ptab').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  // re-render just the chart + labels + stats inside the existing card
+  const s=STOCKS[activeStock];
+  const {svgHtml,labelsHtml,chartStatsHtml}=renderChart(activeStock,period);
+  const svgWrap=document.getElementById('chart-svg-wrap');
+  const xlWrap=document.getElementById('chart-xl-wrap');
+  const statsWrap=document.getElementById('chart-stats-wrap');
+  if(svgWrap) svgWrap.innerHTML=svgHtml;
+  if(xlWrap) xlWrap.innerHTML=labelsHtml;
+  if(statsWrap) statsWrap.innerHTML=chartStatsHtml;
+}
+
+function renderDetail(t){
+  activeStock=t;
+  const s=STOCKS[t],pnl=calcPnL(t),up=s.dir==='up';
+  const period=chartPeriod;
+  const {svgHtml,labelsHtml,chartStatsHtml}=renderChart(t,period);
+  const an=s.analysts;
+  const buyPct=Math.round(an.buy/an.total*100),holdPct=Math.round(an.hold/an.total*100),sellPct=100-buyPct-holdPct;
+  const upside=((an.avgTarget-s.price)/s.price*100);
+
+  const pnlBlock=pnl?`<div class="pnl-box">
+    <div class="pnl-row"><span class="pnl-l">Aantal stuks</span><span class="pnl-v">${fmtQty(pnl.qty)}</span></div>
+    <div class="pnl-row"><span class="pnl-l">Gem. aankoopprijs</span><span class="pnl-v">${s.cur}${pnl.avg.toFixed(2)}</span></div>
+    <div class="pnl-sep"></div>
+    <div class="pnl-row"><span class="pnl-l">Kostprijs totaal</span><span class="pnl-v">${fmtN(pnl.cost,s.cur,0)}</span></div>
+    <div class="pnl-row"><span class="pnl-l">Huidige waarde</span><span class="pnl-v">${fmtN(pnl.cur,s.cur,0)}</span></div>
+    <div class="pnl-sep"></div>
+    <div class="pnl-row"><span class="pnl-l">Winst / Verlies</span><span class="pnl-v ${cls(pnl.pnl)}" style="font-size:17px;">${pnl.pnl>=0?'▲ +':'▼ '}${fmtN(Math.abs(pnl.pnl),s.cur,0)}</span></div>
+    <div class="pnl-row"><span class="pnl-l">Rendement</span><span class="pnl-v ${cls(pnl.pnl)}">${fmtPct(pnl.pct)}</span></div>
+  </div>`:
+  `<div class="no-pos-box"><div class="no-pos-icon">⚙️</div><div class="no-pos-title">Positie niet ingevoerd</div><div class="no-pos-sub">Tik ⚙️ bovenaan om aantallen en aankoopprijs in te voeren.</div></div>`;
+
+  const ratioHtml=Object.entries(s.ratios).map(([l,v])=>`<div class="ratio-cell"><div class="ratio-l">${l}</div><div class="ratio-v">${v}</div></div>`).join('');
+  const auHtml=an.updates.map(u=>`<div class="au-item">
+    <div class="au-dir ${u.dir==='up'?'au-up':u.dir==='dn'?'au-dn':'au-hold'}">${u.dir==='up'?'▲ KOOP':u.dir==='dn'?'▼ SELL':'→ HOLD'}</div>
+    <div class="au-body">
+      <div class="au-firm">${u.firm} <span style="font-weight:400;color:var(--muted);">${u.action} ${u.from}→${u.to} · ${u.rating}</span></div>
+      <div class="au-detail">${u.note}</div>
+    </div>
+    <div class="au-date">${u.date}</div>
+  </div>`).join('');
+  const newsHtml=s.news.map(n=>`<div class="news-item">
+    <div class="ni-meta">
+      <span class="ni-badge ${n.badge}">${n.bl}</span>
+      <span class="ni-date">${n.date}</span>
+      ${n.time?`<span class="ni-time">⏰ ${n.time}</span>`:''}
+      ${n.url?`<a href="${n.url}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);padding:1px 6px;border:1px solid rgba(66,133,244,.3);border-radius:3px;text-decoration:none;margin-left:auto;">🔗 Bron</a>`:''}
+    </div>
+    <div class="ni-title">${n.title}</div>
+    <div class="ni-body">${n.body}</div>
+    <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="https://finance.yahoo.com/quote/${t}/news/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--muted);text-decoration:none;">Yahoo Finance →</a>
+      <a href="https://www.google.com/search?q=${encodeURIComponent(n.title)}&tbm=nws" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--muted);text-decoration:none;">Google News →</a>
+    </div>
+  </div>`).join('');
+
+  // Period tab buttons — build with onclick calling setPeriod
+  const periods=['1J','6M','3M','YTD'];
+  const tabsHtml=periods.map(p=>`<div class="ptab ${p===period?'active':''}" onclick="setPeriod('${p}',this)">${p}</div>`).join('');
+
+  document.getElementById('detail-area').innerHTML=`
+  <div class="det-card" style="--card-color:${s.color};">
+    <div class="dc-header">
+      <div class="dc-logo-wrap">
+        <div class="dc-logo" style="background:${s.logoBg};">${s.logoTxt}</div>
+        <div><div class="dc-name">${s.full}</div><div class="dc-sub">${s.ticker} · ${s.exchange}</div></div>
+      </div>
+      <div class="dc-price-block">
+        <div class="dc-price" style="color:${s.color};">${s.cur}${s.price.toLocaleString('nl-BE',{minimumFractionDigits:2})}</div>
+        <div class="dc-chg ${up?'up':'dn'}">${s.chg}</div>
+      </div>
+    </div>
+    <div class="dc-pos">
+      <div class="dc-pos-hdr">
+        <div class="dc-pos-title">MIJN POSITIE</div>
+        <div class="dc-edit" onclick="openDrawerFor('${t}')">✏️ Bewerken</div>
+      </div>
+      ${pnlBlock}
+    </div>
+    <div class="dc-chart">
+      <div class="dc-chart-hdr">
+        <div class="dc-chart-lbl">KOERSVERLOOP</div>
+        <div class="period-tabs">${tabsHtml}</div>
+      </div>
+      <div id="chart-stats-wrap">${chartStatsHtml}</div>
+      <div id="chart-svg-wrap">${svgHtml}</div>
+      <div class="chart-xl" id="chart-xl-wrap">${labelsHtml}</div>
+    </div>
+    <div class="dc-ratios">
+      <div class="ratios-title">FINANCIËLE RATIO'S & KENGETALLEN</div>
+      <div class="ratios-grid">${ratioHtml}</div>
+    </div>
+    <div class="dc-analysts">
+      <div class="analyst-title">ANALYST CONSENSUS & KOERSDOELEN</div>
+      <div class="consensus-row">
+        <div class="cons-badge ${an.buy/an.total>0.6?'cons-buy':an.sell/an.total>0.2?'cons-sell':'cons-hold'}">${an.consensus}</div>
+        <div class="cons-detail"><strong>${an.buy}</strong> Kopen · <strong>${an.hold}</strong> Houden · <strong>${an.sell}</strong> Verkopen · <strong>${an.total}</strong> analisten</div>
+      </div>
+      <div class="target-row">
+        <div class="target-box"><div class="target-l">Laag Doel</div><div class="target-v">${s.cur}${an.lowTarget}</div><div class="target-updown" style="color:var(--red);">${fmtPct((an.lowTarget-s.price)/s.price*100)}</div></div>
+        <div class="target-box" style="border:1px solid ${s.color};"><div class="target-l">Gem. Doel</div><div class="target-v" style="color:${s.color};">${s.cur}${an.avgTarget}</div><div class="target-updown" style="color:${upside>=0?'var(--green)':'var(--red)'};">${fmtPct(upside)}</div></div>
+        <div class="target-box"><div class="target-l">Hoog Doel</div><div class="target-v">${s.cur}${an.highTarget}</div><div class="target-updown" style="color:var(--green);">${fmtPct((an.highTarget-s.price)/s.price*100)}</div></div>
+      </div>
+      <div class="analyst-bar">
+        <div class="abar-lbl"><span>Kopen ${buyPct}%</span><span>Houden ${holdPct}%</span><span>Verkopen ${Math.max(0,sellPct)}%</span></div>
+        <div class="abar-track">
+          <div class="abar-buy" style="width:${buyPct}%;"></div>
+          <div class="abar-hold" style="width:${holdPct}%;"></div>
+          <div class="abar-sell" style="width:${Math.max(0,sellPct)}%;"></div>
+        </div>
+      </div>
+      <div class="analyst-title" style="margin-bottom:8px;">RECENTE ANALIST UPDATES</div>
+      <div class="analyst-updates">${auHtml}</div>
+    </div>
+    <div class="dc-news">
+      <div class="news-title">NIEUWS & EVENTS · ${s.ticker}</div>
+      ${newsHtml}
+    </div>
+  </div>
+  <div class="ev-banner" style="border-color:${s.nextColor}44;">
+    <div class="ev-icon">${s.nextIcon}</div>
+    <div><div class="ev-lbl">VOLGEND EVENT</div><div class="ev-title">${s.next}</div></div>
+  </div>`;
+}
+
+function setStock(t){chartPeriod='1J';buildTabs();renderDetail(t);window.scrollTo(0,0);}
+function goDetail(t){activeStock=t;showPage('detail');}
+
+// ─── DRAWER ───────────────────────────────────────────────────────────────────
+function buildDrawer(focusTicker=null){
+  document.getElementById('drawer-stocks').innerHTML=Object.keys(STOCKS).map(t=>{
+    const s=STOCKS[t],p=positions[t]||{qty:0,avgCost:0};
+    const live = liveData[t];
+    const priceStr = live ? `${s.cur}${s.price.toLocaleString('nl-BE',{minimumFractionDigits:2})} (live)` : `${s.cur}${s.price} (statisch)`;
+    return `<div class="dr-stock">
+      <div class="dr-head">
+        <div class="dr-logo" style="background:${s.logoBg};">${s.logoTxt}</div>
+        <div style="flex:1;"><div class="dr-name">${s.name}</div><div class="dr-price">${s.ticker} · ${priceStr}</div></div>
+        <div onclick="removeTicker('${t}')" style="font-size:18px;cursor:pointer;color:var(--muted);padding:4px 8px;" title="Verwijder ${t}">🗑️</div>
+      </div>
+      <div class="dr-inputs">
+        <div class="dr-iw"><div class="dr-lbl">Aantal Stuks</div><input class="dr-input" type="number" id="qty_${t}" value="${p.qty||''}" placeholder="0" min="0" step="0.000001" inputmode="decimal"></div>
+        <div class="dr-iw"><div class="dr-lbl">Gem. Aankoopprijs (${s.cur})</div><input class="dr-input" type="number" id="avg_${t}" value="${p.avgCost||''}" placeholder="0,00" min="0" step="0.01" inputmode="decimal"></div>
+      </div>
+    </div>`;
+  }).join('');
+  if(focusTicker) setTimeout(()=>{const el=document.getElementById('qty_'+focusTicker);if(el)el.focus();},400);
+}
+function openDrawer(){buildDrawer();document.getElementById('drawer').classList.add('open');document.getElementById('overlay').classList.add('open');document.body.style.overflow='hidden';}
+function openDrawerFor(t){openDrawer();buildDrawer(t);}
+function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('overlay').classList.remove('open');document.body.style.overflow='';}
+function savePositions(){
+  Object.keys(STOCKS).forEach(t=>{
+    const q=parseFloat(document.getElementById('qty_'+t)?.value||0)||0;
+    const a=parseFloat(document.getElementById('avg_'+t)?.value||0)||0;
+    positions[t]={qty:q,avgCost:a};
+  });
+  closeDrawer();
+  renderSummary(); renderOverview();
+  if(activePage==='detail') renderDetail(activeStock);
+
+  const toast=document.createElement('div');
+  toast.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--green);color:var(--green);font-family:var(--mono);font-size:12px;font-weight:700;padding:10px 22px;border-radius:20px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.4);white-space:nowrap;';
+  toast.textContent='⏳ Opslaan naar cloud...';
+  document.body.appendChild(toast);
+
+  saveToSupabase()
+    .then(()=>{
+      toast.textContent='☁️ ✓ Opgeslagen — sync op alle toestellen';
+      setTimeout(()=>toast.remove(), 2800);
+    })
+    .catch(e=>{
+      toast.style.borderColor='var(--orange)';
+      toast.style.color='var(--orange)';
+      toast.textContent='⚠ Lokaal opgeslagen (cloud fout: '+e.message.slice(0,40)+')';
+      console.error('Save error:', e);
+      setTimeout(()=>toast.remove(), 4000);
+    });
+}
+
+// ─── SYNC & RETRY ─────────────────────────────────────────────────────────────
+async function syncNow(){
+  const btn=document.querySelector('.icon-btn[onclick="syncNow()"]');
+  if(btn){ btn.style.animation='spin 1s linear infinite'; }
+  try {
+    await loadTickersFromDB();
+    await refreshPrices(false);
+  } catch(e) {
+    showDbStatus('⚠️ Sync mislukt', 'orange');
+  } finally {
+    if(btn){ btn.style.animation=''; }
+  }
+}
+
+async function retryConnection(){
+  document.getElementById('db-status-banner').style.display='none';
+  await loadPositions();
+}
+
+// ─── TICKER MANAGEMENT ───────────────────────────────────────────────────────
+// Add extra ticker to Supabase and STOCKS if not already present
+async function addTicker(ticker) {
+  ticker = ticker.toUpperCase().trim();
+  if (!ticker) return;
+  if (STOCKS[ticker]) { showDbStatus(`${ticker} zit al in je portefeuille`, 'orange'); return; }
+
+  showDbStatus(`🔄 ${ticker} opzoeken via Finnhub...`, 'orange');
+  try {
+    const fhSym = FH_SYMBOL[ticker] || ticker;
+    const [q, profile] = await Promise.all([
+      fetchQuote(fhSym),
+      fetchProfile(fhSym)
+    ]);
+    if (!q || q.c === 0) throw new Error('Ticker niet gevonden. Controleer symbool (bv. NVDA, XETRA:IFX, EURONEXT:AKA)');
+    const name = profile?.name    || ticker;
+    const exch = profile?.exchange || '—';
+    const cur  = (profile?.currency || 'USD') === 'EUR' ? '€' : '$';
+
+    // Pick a random color from palette
+    const colors = ['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff','#5f27cd','#00d2d3','#ff9f43'];
+    const col = colors[Object.keys(STOCKS).length % colors.length];
+
+    // Add to STOCKS
+    STOCKS[ticker] = {
+      name: name.split(' ').slice(0,2).join(' '),
+      full: name,
+      ticker, exchange: exch, cur,
+      color: col,
+      logoBg: `linear-gradient(135deg,#1a1a2e,${col})`,
+      logoTxt: ticker.slice(0,4),
+      price: q.c ?? 0,
+      chg: '—', chgNum: 0, dir: 'up',
+      wkH: 0, wkL: 0,
+      ratios: { 'Exchange': exch, 'Valuta': cur },
+      analysts: { consensus:'—', buy:0, hold:0, sell:0, total:0, avgTarget:0, highTarget:0, lowTarget:0 },
+      news: [],
+      priceH: { '1J':[], '6M':[], '3M':[], 'YTD':[] },
+      annH:   { '1J':[], '6M':[], '3M':[], 'YTD':[] },
+      dayChg: 0, ytdChg: 0,
+      next: '—', nextIcon: '📅', nextColor: col
+    };
+    positions[ticker] = { qty: 0, avgCost: 0 };
+    FH_SYMBOL[ticker] = fhSym; // voeg toe aan symboolmapping
+
+    // Save to Supabase
+    await sbUpsert('portfolio_positions', [{
+      ticker, qty: 0, avg_cost: 0, updated_at: new Date().toISOString()
+    }]);
+
+    showDbStatus(`✓ ${ticker} (${name}) toegevoegd!`, 'green');
+    renderOverview(); buildTabs();
+    if (activePage === 'detail') { buildTabs(); }
+    // Fetch live price for new ticker
+    setTimeout(() => refreshPrices(true), 500);
+  } catch(e) {
+    showDbStatus(`❌ ${ticker}: ${e.message}`, 'red');
+    delete STOCKS[ticker];
+    delete positions[ticker];
+  }
+}
+
+async function removeTicker(ticker) {
+  if (!confirm(`Verwijder ${ticker} uit je portefeuille?`)) return;
+  delete STOCKS[ticker];
+  delete positions[ticker];
+  delete liveData[ticker];
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/portfolio_positions?ticker=eq.${ticker}`, {
+      method: 'DELETE',
+      headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }
+    });
+    if (!r.ok) console.warn('Delete failed:', await r.text());
+  } catch(e) { console.warn('Remove ticker error:', e.message); }
+  if (activeStock === ticker) activeStock = Object.keys(STOCKS)[0] || 'AAPL';
+  renderOverview(); buildTabs();
+  if (activePage === 'detail') renderDetail(activeStock);
+  showDbStatus(`✓ ${ticker} verwijderd`, 'green');
+}
+
+// ─── ADD TICKER MODAL ─────────────────────────────────────────────────────────
+function openAddTicker() {
+  const existing = document.getElementById('add-ticker-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'add-ticker-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-end;';
+  modal.innerHTML = `
+    <div style="width:100%;background:var(--s1);border-top:1px solid var(--b2);border-radius:20px 20px 0 0;padding:24px 20px 40px;">
+      <div style="width:36px;height:4px;border-radius:2px;background:var(--b2);margin:0 auto 18px;"></div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:6px;">Aandeel Toevoegen</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Voer een ticker in (bv. NVDA, MSFT, BAS.DE, ASML.AS)</div>
+      <div style="background:var(--s2);border:1px solid var(--b2);border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">🔍</span>
+        <input id="new-ticker-input" type="text" placeholder="Ticker symbool..." autocapitalize="characters"
+          style="flex:1;background:transparent;border:none;outline:none;font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);text-transform:uppercase;"
+          oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:16px;">
+        NASDAQ/NYSE: AAPL NVDA MSFT · XETRA: IFX.DE BAS.DE · Euronext: ASML.AS AKA.BR · Euronext Paris: MC.PA
+      </div>
+      <button onclick="handleAddTicker()" style="width:100%;padding:14px;background:var(--green);border:none;border-radius:12px;font-family:var(--mono);font-size:13px;font-weight:700;color:#000;cursor:pointer;margin-bottom:10px;">
+        ✓ Toevoegen aan Portefeuille
+      </button>
+      <button onclick="document.getElementById('add-ticker-modal').remove()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--b2);border-radius:12px;font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;">
+        Annuleren
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  setTimeout(() => document.getElementById('new-ticker-input')?.focus(), 200);
+}
+
+function handleAddTicker() {
+  const val = document.getElementById('new-ticker-input')?.value?.trim().toUpperCase();
+  if (!val) return;
+  document.getElementById('add-ticker-modal')?.remove();
+  addTicker(val);
+}
+
+// ─── LOAD TICKERS FROM SUPABASE ───────────────────────────────────────────────
+async function loadTickersFromDB() {
+  try {
+    const data = await sbGet('portfolio_positions', 'select=ticker,qty,avg_cost&order=ticker');
+    if (data && data.length > 0) {
+      data.forEach(row => {
+        positions[row.ticker] = {
+          qty:     parseFloat(row.qty)      || 0,
+          avgCost: parseFloat(row.avg_cost) || 0
+        };
+        // Add dynamic tickers not in original STOCKS
+        if (!STOCKS[row.ticker] && STOCK_META[row.ticker]) {
+          STOCKS[row.ticker] = { ...STOCK_META[row.ticker], price:0, chg:'—', chgNum:0, dir:'up',
+            wkH:0, wkL:0, ratios:{}, analysts:{consensus:'—',buy:0,hold:0,sell:0,total:0,avgTarget:0,highTarget:0,lowTarget:0},
+            news:[], priceH:{'1J':[],'6M':[],'3M':[],'YTD':[]}, annH:{'1J':[],'6M':[],'3M':[],'YTD':[]},
+            dayChg:0, ytdChg:0, next:'—', nextIcon:'📅', nextColor:'#888' };
+        } else if (!positions[row.ticker]) {
+          positions[row.ticker] = { qty: 0, avgCost: 0 };
+        }
+      });
+    }
+    dbReady = true;
+  } catch(e) {
+    console.warn('loadTickersFromDB failed:', e.message);
+    // Restore defaults
+    Object.keys(STOCKS).forEach(t => { if(!positions[t]) positions[t]={qty:0,avgCost:0}; });
+    showDbStatus('⚠️ Offline — lokale data', 'orange');
+  }
+}
+
+// ─── NAV ──────────────────────────────────────────────────────────────────────
+function showPage(page){
+  activePage=page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.bnav').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-'+page).classList.add('active');
+  if(page==='detail'){buildTabs();renderDetail(activeStock);}
+  window.scrollTo(0,0);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+(async function init() {
+  // Ensure all default tickers have a position slot
+  Object.keys(STOCKS).forEach(t => { positions[t] = {qty:0, avgCost:0}; });
+
+  // 1. Render immediately with static data
+  renderSummary(); renderOverview(); buildTabs(); renderDetail('AAPL');
+
+  // 2. Load positions from Supabase
+  const el = document.querySelector('.live-badge');
+  if (el) el.innerHTML = '<div class="live-dot"></div>DB...';
+  await loadTickersFromDB();
+  renderSummary(); renderOverview(); buildTabs();
+
+  // 3. Fetch live prices
+  if (el) el.innerHTML = '<div class="live-dot"></div>KOERSEN...';
+  await refreshPrices(true);
+  if (el) el.innerHTML = '<div class="live-dot"></div>LIVE';
+  lastRefresh = new Date();
+  updateRefreshBadge();
+
+  // 4. Start auto-refresh every 5 min
+  startAutoRefresh();
+})();
+</script>
+</body>
+</html>
+
