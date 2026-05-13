@@ -1203,17 +1203,21 @@ function hashPin(pin) {
 
 // Laad PIN hash vanuit Supabase (of localStorage als fallback)
 async function loadPinHash() {
+  // Probeer eerst localStorage (instant, geen network)
+  const local = localStorage.getItem('pf_pin_hash');
+
+  // Dan Supabase op de achtergrond (als de tabel bestaat)
   try {
     const data = await sbGet('app_settings', 'select=value&key=eq.pin_hash');
     if (data && data.length > 0) {
       pinHashStored = data[0].value;
-      localStorage.setItem('pf_pin_hash', pinHashStored); // lokale backup
+      localStorage.setItem('pf_pin_hash', pinHashStored);
       return pinHashStored;
     }
   } catch(e) {
-    // Tabel bestaat nog niet of geen verbinding — gebruik localStorage
+    // app_settings tabel bestaat nog niet — gebruik localStorage
   }
-  return localStorage.getItem('pf_pin_hash') || null;
+  return local || null;
 }
 
 async function savePinHash(hash) {
@@ -1228,7 +1232,14 @@ async function savePinHash(hash) {
 }
 
 async function initPin() {
-  pinHashStored = await loadPinHash();
+  // Laad PIN hash met timeout — mag nooit de UI blokkeren
+  try {
+    const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
+    pinHashStored = await Promise.race([loadPinHash(), timeoutPromise.then(() => localStorage.getItem('pf_pin_hash') || null)]);
+  } catch(e) {
+    pinHashStored = localStorage.getItem('pf_pin_hash') || null;
+  }
+
   const session = sessionStorage.getItem(SESSION_KEY);
 
   if (!pinHashStored) {
@@ -3500,8 +3511,7 @@ function lockDashboard() {
 
   // 1. Render meteen met statische data (zonder posities)
   renderSummary(); renderOverview(); buildTabs();
-  const firstActive = Object.keys(STOCKS)[0] || 'AAPL';
-  renderDetail(firstActive);
+  renderDetail(Object.keys(STOCKS)[0] || 'AAPL');
 
   // 2. Laad uit Supabase — dit bepaalt welke tickers er zijn
   const el = document.querySelector('.live-badge');
@@ -3515,11 +3525,9 @@ function lockDashboard() {
   ]);
 
   // Render overview met DB-data (zonder live koersen)
-  const firstActive = Object.keys(STOCKS)[0] || 'AAPL';
-  activeStock = firstActive;
+  activeStock = Object.keys(STOCKS)[0] || 'AAPL';
   renderSummary(); renderOverview(); buildTabs();
 
-  // Toon detail pagina met placeholder (geen grafiek laden nog)
   if (Object.keys(STOCKS).length === 0) {
     showDbStatus('⚠️ Geen aandelen in portefeuille. Voeg er toe via ➕', 'orange');
   }
