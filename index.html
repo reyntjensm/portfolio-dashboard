@@ -429,12 +429,12 @@ canvas.ichart-overlay{position:absolute;top:0;left:0;width:100%;pointer-events:n
 
 <!-- SETUP BANNER — shown if table doesn't exist yet -->
 <div id="db-status-banner" style="display:none;margin:12px 16px;background:var(--s1);border:1px solid var(--orange);border-radius:12px;padding:16px;">
-  <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--orange);margin-bottom:10px;">⚠️ API KEY ONTBREEKT</div>
+  <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--orange);margin-bottom:10px;">⚠️ DATABASE SETUP VEREIST</div>
   <div style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:12px;">
-    <strong style="color:var(--text);">Stap 1:</strong> Gratis key ophalen via <a href="https://finnhub.io/register" target="_blank" style="color:var(--blue);">finnhub.io/register</a><br>
-    <strong style="color:var(--text);">Stap 2:</strong> Open index.html in tekstverwerker en vervang <code style="background:var(--s2);padding:1px 5px;border-radius:3px;">JOUW_FMP_API_KEY_HIER</code> door je key.
+    Voer de SQL queries uit in Supabase om de tabellen aan te maken.<br>
+    Zie de README of vraag de beheerder om de setup te voltooien.
   </div>
-  <button onclick="retryConnection()" style="font-family:var(--mono);font-size:11px;padding:8px 16px;border-radius:8px;border:1px solid var(--green);background:var(--gd);color:var(--green);cursor:pointer;">✓ Key toegevoegd — opnieuw laden</button>
+  <button onclick="retryConnection()" style="font-family:var(--mono);font-size:11px;padding:8px 16px;border-radius:8px;border:1px solid var(--green);background:var(--gd);color:var(--green);cursor:pointer;">✓ Setup voltooid — opnieuw verbinden</button>
 </div>
 
 <div class="overlay" id="overlay" onclick="closeDrawer()"></div>
@@ -2716,71 +2716,71 @@ function handleAddTicker() {
 
 // ─── LOAD TICKERS FROM SUPABASE ───────────────────────────────────────────────
 async function loadTickersFromDB() {
+  const DEFAULT_TICKERS = ['AAPL','GOOGL','ACKB','SOF','IFX'];
+
   try {
     const data = await sbGet('portfolio_positions', 'select=ticker,qty,avg_cost&order=ticker');
-    if (data && data.length > 0) {
-      // Welke tickers zitten in de DB?
-      const dbTickers = new Set(data.map(row => row.ticker));
 
-      // Verwijder tickers uit STOCKS die NIET meer in de DB zitten
-      // (maar behoud de 5 standaard tickers als ze nooit werden toegevoegd via DB)
-      const defaultTickers = new Set(['AAPL','GOOGL','ACKB','SOF','IFX']);
+    if (data && data.length > 0) {
+      const dbSet = new Set(data.map(r => r.ticker));
+
+      // Verwijder dynamisch toegevoegde tickers die niet meer in DB zitten
       Object.keys(STOCKS).forEach(t => {
-        if (!dbTickers.has(t) && !defaultTickers.has(t)) {
-          // Dynamisch toegevoegde ticker die verwijderd werd uit DB
-          delete STOCKS[t];
-          delete positions[t];
-          delete liveData[t];
+        if (!dbSet.has(t) && !DEFAULT_TICKERS.includes(t)) {
+          delete STOCKS[t]; delete positions[t]; delete liveData[t];
         }
       });
 
-      // Laad posities en voeg eventuele nieuwe tickers toe
+      // Verwijder default tickers die bewust werden verwijderd uit DB
+      DEFAULT_TICKERS.forEach(t => {
+        if (!dbSet.has(t) && STOCKS[t]) {
+          delete STOCKS[t]; delete positions[t]; delete liveData[t];
+        }
+      });
+
+      // Laad posities + voeg nieuwe/onbekende tickers toe
       data.forEach(row => {
         positions[row.ticker] = {
           qty:     parseFloat(row.qty)      || 0,
           avgCost: parseFloat(row.avg_cost) || 0
         };
-        // Voeg toe aan STOCKS als het een nieuwe ticker is die er nog niet in zit
         if (!STOCKS[row.ticker]) {
+          const palette = ['#ff6b6b','#feca57','#48dbfb','#54a0ff','#5f27cd','#00d2d3','#ff9f43'];
+          const col = palette[Object.keys(STOCKS).length % palette.length];
           STOCKS[row.ticker] = {
-            name: row.ticker, full: row.ticker, ticker: row.ticker,
-            exchange: '—', cur: '$',
-            color: '#888',
-            logoBg: 'linear-gradient(135deg,#1a1a2e,#888)',
-            logoTxt: row.ticker.slice(0,4),
-            price: 0, chg:'—', chgNum:0, dir:'up',
-            wkH:0, wkL:0,
+            name:row.ticker, full:row.ticker, ticker:row.ticker,
+            exchange:'—', cur:'$', color:col,
+            logoBg:`linear-gradient(135deg,#1a1a2e,${col})`,
+            logoTxt:row.ticker.slice(0,4),
+            price:0, chg:'—', chgNum:0, dir:'up', wkH:0, wkL:0,
             ratios:{}, news:[],
-            analysts:{ consensus:'—',buy:0,hold:0,sell:0,total:0,avgTarget:0,highTarget:0,lowTarget:0 },
+            analysts:{consensus:'—',buy:0,hold:0,sell:0,total:0,avgTarget:0,highTarget:0,lowTarget:0},
             priceH:{'1J':[],'6M':[],'3M':[],'YTD':[]},
             annH:{'1J':[],'6M':[],'3M':[],'YTD':[]},
-            dayChg:0, ytdChg:0, next:'—', nextIcon:'📅', nextColor:'#888'
+            dayChg:0, ytdChg:0, next:'—', nextIcon:'📅', nextColor:col
           };
-          // Voeg ook toe aan YF_SYM mapping
           if (!YF_SYM[row.ticker]) YF_SYM[row.ticker] = row.ticker;
         }
       });
 
-      // Verwijder ook posities van default tickers die niet in DB zitten
-      // (dit betekent dat ze bewust werden verwijderd)
-      defaultTickers.forEach(t => {
-        if (!dbTickers.has(t) && STOCKS[t]) {
-          delete STOCKS[t];
-          delete positions[t];
-          delete liveData[t];
-        }
-      });
     } else {
-      // Lege DB — eerste gebruik, initialiseer alle default tickers
-      Object.keys(STOCKS).forEach(t => {
-        if (!positions[t]) positions[t] = { qty: 0, avgCost: 0 };
+      // Lege DB — seed defaults + schrijf naar DB
+      DEFAULT_TICKERS.forEach(t => {
+        if (!positions[t]) positions[t] = {qty:0, avgCost:0};
       });
+      sbUpsert('portfolio_positions',
+        DEFAULT_TICKERS.map(t => ({ticker:t, qty:0, avg_cost:0, updated_at:new Date().toISOString()}))
+      ).catch(() => {});
     }
     dbReady = true;
   } catch(e) {
     console.warn('loadTickersFromDB failed:', e.message);
-    Object.keys(STOCKS).forEach(t => { if(!positions[t]) positions[t]={qty:0,avgCost:0}; });
+    // Fallback: gebruik bestaande STOCKS + localStorage
+    DEFAULT_TICKERS.forEach(t => { if(!positions[t]) positions[t]={qty:0,avgCost:0}; });
+    const local = JSON.parse(localStorage.getItem('pf_pos_v2')||'{}');
+    Object.keys(local).forEach(t => { if(positions[t]!==undefined) positions[t]=local[t]; });
     showDbStatus('⚠️ Offline — lokale data', 'orange');
+    dbReady = true;
   }
 }
 
@@ -3514,18 +3514,23 @@ function lockDashboard() {
     loadWatchlist(),
   ]);
 
-  // Als STOCKS nu leeg is na DB-sync, render met wat er is
+  // Render overview met DB-data (zonder live koersen)
+  const firstActive = Object.keys(STOCKS)[0] || 'AAPL';
+  activeStock = firstActive;
+  renderSummary(); renderOverview(); buildTabs();
+
+  // Toon detail pagina met placeholder (geen grafiek laden nog)
   if (Object.keys(STOCKS).length === 0) {
     showDbStatus('⚠️ Geen aandelen in portefeuille. Voeg er toe via ➕', 'orange');
-  } else {
-    const active = Object.keys(STOCKS)[0];
-    activeStock = active;
-    renderSummary(); renderOverview(); buildTabs(); renderDetail(active);
   }
 
-  // 3. Haal live koersen op (portfolio + watchlist)
+  // 3. Haal live koersen op — EERST dan pas detail renderen
   if (el) el.innerHTML = '<div class="live-dot"></div>KOERSEN...';
   await refreshPrices(true);
+
+  // Nu pas detail renderen met live data
+  renderSummary(); renderOverview(); buildTabs();
+  if (activePage === 'detail') renderDetail(activeStock);
 
   // Watchlist data ophalen
   const wlTickers = Object.keys(watchlist);
