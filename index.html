@@ -2424,11 +2424,16 @@ function buildChartHTML(ticker) {
 
 function renderDetail(t){
   activeStock=t;
-  const s=STOCKS[t],pnl=calcPnL(t),up=s.dir==='up';
-  const an=s.analysts;
+  const s=STOCKS[t];
+  if (!s) { // Ticker niet gevonden — toon lege staat
+    document.getElementById('detail-area').innerHTML=`<div style="padding:40px 20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Ticker niet gevonden. Kies een aandeel uit de tabs hierboven.</div>`;
+    return;
+  }
+  const pnl=calcPnL(t), up=s.dir==='up';
+  const an=s.analysts || {consensus:'—',buy:0,hold:0,sell:0,total:0,avgTarget:0,highTarget:0,lowTarget:0};
   const tot = an.total || 1;
-  const buyPct=Math.round(an.buy/tot*100),holdPct=Math.round(an.hold/tot*100),sellPct=100-buyPct-holdPct;
-  const upside=((an.avgTarget-s.price)/s.price*100);
+  const buyPct=Math.round((an.buy||0)/tot*100), holdPct=Math.round((an.hold||0)/tot*100), sellPct=100-buyPct-holdPct;
+  const upside = an.avgTarget && s.price ? ((an.avgTarget-s.price)/s.price*100) : 0;
 
 
   const pnlBlock=pnl?`<div class="pnl-box">
@@ -2443,33 +2448,32 @@ function renderDetail(t){
   </div>`:
   `<div class="no-pos-box"><div class="no-pos-icon">⚙️</div><div class="no-pos-title">Positie niet ingevoerd</div><div class="no-pos-sub">Tik ⚙️ bovenaan om aantallen en aankoopprijs in te voeren.</div></div>`;
 
-  const ratioHtml=Object.entries(s.ratios).map(([l,v])=>`<div class="ratio-cell"><div class="ratio-l">${l}</div><div class="ratio-v">${v}</div></div>`).join('');
-  const auHtml=an.updates.map(u=>`<div class="au-item">
+  const ratioHtml = Object.entries(s.ratios||{}).map(([l,v])=>
+    `<div class="ratio-cell"><div class="ratio-l">${l}</div><div class="ratio-v">${v}</div></div>`
+  ).join('') || '<div class="ratio-cell"><div class="ratio-l">Data</div><div class="ratio-v">Laden...</div></div>';
+
+  // Statische analyst updates (uit STOCKS data) — veilig mappen
+  const auHtml = (an.updates||[]).map(u=>`<div class="au-item">
     <div class="au-dir ${u.dir==='up'?'au-up':u.dir==='dn'?'au-dn':'au-hold'}">${u.dir==='up'?'▲ KOOP':u.dir==='dn'?'▼ SELL':'→ HOLD'}</div>
     <div class="au-body">
-      <div class="au-firm">${u.firm} <span style="font-weight:400;color:var(--muted);">${u.action} ${u.from}→${u.to} · ${u.rating}</span></div>
-      <div class="au-detail">${u.note}</div>
+      <div class="au-firm">${u.firm} <span style="font-weight:400;color:var(--muted);">${u.action||''} ${u.from||''}${u.to?'→'+u.to:''} · ${u.rating||''}</span></div>
+      <div class="au-detail">${u.note||''}</div>
     </div>
-    <div class="au-date">${u.date}</div>
-  </div>`).join('');
-  const newsHtml=s.news.map(n=>`<div class="news-item">
+    <div class="au-date">${u.date||''}</div>
+  </div>`).join('') || '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:8px 0;">Live updates worden geladen via nieuws sectie hieronder</div>';
+
+  const newsHtml = (s.news||[]).map(n=>`<div class="news-item">
     <div class="ni-meta">
-      <span class="ni-badge ${n.badge}">${n.bl}</span>
-      <span class="ni-date">${n.date}</span>
+      <span class="ni-badge ${n.badge||'nb-cat'}">${n.bl||'NIEUWS'}</span>
+      <span class="ni-date">${n.date||''}</span>
       ${n.time?`<span class="ni-time">⏰ ${n.time}</span>`:''}
       ${n.url?`<a href="${n.url}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);padding:1px 6px;border:1px solid rgba(66,133,244,.3);border-radius:3px;text-decoration:none;margin-left:auto;">🔗 Bron</a>`:''}
     </div>
-    <div class="ni-title">${n.title}</div>
-    <div class="ni-body">${n.body}</div>
-    <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">
-      <a href="https://finance.yahoo.com/quote/${t}/news/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--muted);text-decoration:none;">Yahoo Finance →</a>
-      <a href="https://www.google.com/search?q=${encodeURIComponent(n.title)}&tbm=nws" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--muted);text-decoration:none;">Google News →</a>
-    </div>
+    <div class="ni-title">${n.title||''}</div>
+    <div class="ni-body">${n.body||''}</div>
   </div>`).join('');
 
-  // Period tab buttons — build with onclick calling setPeriod
-  const periods=['1J','6M','3M','YTD'];
-  const tabsHtml=periods.map(p=>`<div class="ptab ${p===period?'active':''}" onclick="setPeriod('${p}',this)">${p}</div>`).join('');
+  // Chart wordt gebouwd via buildChartHTML (eigen periode-knoppen)
 
   document.getElementById('detail-area').innerHTML=`
   <div class="det-card" style="--card-color:${s.color};">
@@ -2498,13 +2502,13 @@ function renderDetail(t){
     <div class="dc-analysts">
       <div class="analyst-title">ANALYST CONSENSUS & KOERSDOELEN</div>
       <div class="consensus-row">
-        <div class="cons-badge ${an.buy/an.total>0.6?'cons-buy':an.sell/an.total>0.2?'cons-sell':'cons-hold'}">${an.consensus}</div>
-        <div class="cons-detail"><strong>${an.buy}</strong> Kopen · <strong>${an.hold}</strong> Houden · <strong>${an.sell}</strong> Verkopen · <strong>${an.total}</strong> analisten</div>
+        <div class="cons-badge ${tot>0&&an.buy/tot>0.6?'cons-buy':tot>0&&an.sell/tot>0.2?'cons-sell':'cons-hold'}">${an.consensus||'—'}</div>
+        <div class="cons-detail"><strong>${an.buy||0}</strong> Kopen · <strong>${an.hold||0}</strong> Houden · <strong>${an.sell||0}</strong> Verkopen · <strong>${an.total||0}</strong> analisten</div>
       </div>
       <div class="target-row">
-        <div class="target-box"><div class="target-l">Laag Doel</div><div class="target-v">${s.cur}${an.lowTarget}</div><div class="target-updown" style="color:var(--red);">${fmtPct((an.lowTarget-s.price)/s.price*100)}</div></div>
-        <div class="target-box" style="border:1px solid ${s.color};"><div class="target-l">Gem. Doel</div><div class="target-v" style="color:${s.color};">${s.cur}${an.avgTarget}</div><div class="target-updown" style="color:${upside>=0?'var(--green)':'var(--red)'};">${fmtPct(upside)}</div></div>
-        <div class="target-box"><div class="target-l">Hoog Doel</div><div class="target-v">${s.cur}${an.highTarget}</div><div class="target-updown" style="color:var(--green);">${fmtPct((an.highTarget-s.price)/s.price*100)}</div></div>
+        <div class="target-box"><div class="target-l">Laag Doel</div><div class="target-v">${an.lowTarget?s.cur+an.lowTarget:'—'}</div><div class="target-updown" style="color:var(--red);">${an.lowTarget&&s.price?fmtPct((an.lowTarget-s.price)/s.price*100):''}</div></div>
+        <div class="target-box" style="border:1px solid ${s.color};"><div class="target-l">Gem. Doel</div><div class="target-v" style="color:${s.color};">${an.avgTarget?s.cur+an.avgTarget:'—'}</div><div class="target-updown" style="color:${upside>=0?'var(--green)':'var(--red)'};">${an.avgTarget&&s.price?fmtPct(upside):''}</div></div>
+        <div class="target-box"><div class="target-l">Hoog Doel</div><div class="target-v">${an.highTarget?s.cur+an.highTarget:'—'}</div><div class="target-updown" style="color:var(--green);">${an.highTarget&&s.price?fmtPct((an.highTarget-s.price)/s.price*100):''}</div></div>
       </div>
       <div class="analyst-bar">
         <div class="abar-lbl"><span>Kopen ${buyPct}%</span><span>Houden ${holdPct}%</span><span>Verkopen ${Math.max(0,sellPct)}%</span></div>
@@ -2522,10 +2526,11 @@ function renderDetail(t){
       ${newsHtml}
     </div>
   </div>
-  <div class="ev-banner" style="border-color:${s.nextColor}44;">
-    <div class="ev-icon">${s.nextIcon}</div>
+  ${s.next && s.next !== '—' ? `
+  <div class="ev-banner" style="border-color:${s.nextColor||s.color}44;">
+    <div class="ev-icon">${s.nextIcon||'📅'}</div>
     <div><div class="ev-lbl">VOLGEND EVENT</div><div class="ev-title">${s.next}</div></div>
-  </div>`;
+  </div>` : ''}`;
 
   // Laad historische koersdata en teken de interactieve grafiek
   const cs = getCS(t);
