@@ -112,6 +112,43 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15
 .ptab.active{border-color:var(--card-color,#4285f4);color:var(--card-color,#4285f4);background:rgba(255,255,255,.04);}
 .ptab:active{transform:scale(.94);}
 .chart-stat-row{display:flex;gap:8px;margin-bottom:10px;}
+/* INTERACTIVE CHART */
+.ichart-wrap{padding:14px 18px 8px;border-bottom:1px solid var(--b1);}
+.ichart-toolbar{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.ichart-periods{display:flex;gap:4px;}
+.ict-period{font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 11px;border-radius:20px;border:1px solid var(--b1);color:var(--muted);cursor:pointer;background:var(--s2);transition:all .15s;user-select:none;}
+.ict-period.active{border-color:var(--card-color,#4285f4);color:var(--card-color,#4285f4);background:rgba(255,255,255,.04);}
+.ichart-sep{width:1px;height:20px;background:var(--b2);margin:0 2px;}
+.ict-type{font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 10px;border-radius:8px;border:1px solid var(--b1);color:var(--muted);cursor:pointer;background:var(--s2);transition:all .15s;user-select:none;}
+.ict-type.active{border-color:var(--card-color,#4285f4);color:var(--card-color,#4285f4);}
+.ichart-indicators{display:flex;gap:4px;margin-left:auto;}
+.ict-ind{font-family:var(--mono);font-size:9px;font-weight:700;padding:4px 9px;border-radius:6px;border:1px solid var(--b1);color:var(--muted);cursor:pointer;background:var(--s2);transition:all .15s;letter-spacing:.3px;}
+.ict-ind.active{border-color:currentColor;}
+.ict-ind.ma20{color:#f59e0b;}
+.ict-ind.ma50{color:#3b82f6;}
+.ict-ind.ma200{color:#a855f7;}
+.ict-ind.rsi{color:#22c55e;}
+.ict-ind.vol{color:#64748b;}
+.ict-ind.bb{color:#ec4899;}
+.ichart-canvas-wrap{position:relative;width:100%;touch-action:none;}
+canvas.ichart{display:block;width:100%;cursor:crosshair;}
+canvas.ichart-overlay{position:absolute;top:0;left:0;width:100%;pointer-events:none;}
+.ichart-tooltip{position:absolute;background:rgba(14,16,24,.95);border:1px solid var(--b2);border-radius:8px;padding:8px 12px;font-family:var(--mono);font-size:10px;pointer-events:none;z-index:10;white-space:nowrap;display:none;}
+.ichart-tooltip.show{display:block;}
+.ict-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:2px;}
+.ict-row:last-child{margin-bottom:0;}
+.ict-lbl{color:var(--muted);}
+.ict-val{font-weight:700;}
+.ict-val.up{color:var(--green);}
+.ict-val.dn{color:var(--red);}
+.ichart-loading{display:flex;align-items:center;justify-content:center;height:220px;font-family:var(--mono);font-size:11px;color:var(--muted);}
+.ichart-sr{padding:10px 0 4px;}
+.ichart-sr-title{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.ichart-sr-list{display:flex;gap:6px;flex-wrap:wrap;}
+.ichart-sr-tag{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid;cursor:pointer;}
+.ichart-sr-tag.support{color:var(--green);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08);}
+.ichart-sr-tag.resistance{color:var(--red);border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08);}
+
 .cs-box{flex:1;background:var(--s2);border-radius:8px;padding:7px 10px;text-align:center;}
 .cs-lbl{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:2px;}
 .cs-val{font-family:var(--mono);font-size:12px;font-weight:700;}
@@ -250,9 +287,134 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15
 .g{color:var(--green)!important;}
 .r{color:var(--red)!important;}
 .o{color:var(--orange)!important;}
+
+/* PIN SYSTEEM */
+.pin-overlay{position:fixed;inset:0;background:rgba(8,9,13,.97);backdrop-filter:blur(20px);z-index:900;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;}
+.pin-logo{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:3px;color:var(--muted);}
+.pin-logo em{color:var(--green);font-style:normal;}
+.pin-title{font-size:22px;font-weight:700;text-align:center;}
+.pin-sub{font-size:13px;color:var(--muted);text-align:center;}
+.pin-dots{display:flex;gap:16px;justify-content:center;}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--b2);background:transparent;transition:all .2s;}
+.pin-dot.filled{background:var(--green);border-color:var(--green);}
+.pin-dot.error{background:var(--red);border-color:var(--red);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,72px);gap:10px;justify-content:center;}
+.pin-key{width:72px;height:72px;border-radius:50%;border:1px solid var(--b2);background:var(--s1);font-family:var(--mono);font-size:22px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;-webkit-user-select:none;user-select:none;}
+.pin-key:active{background:var(--s2);transform:scale(.92);}
+.pin-key.del{font-size:18px;color:var(--muted);}
+.pin-key.empty{border:none;background:transparent;cursor:default;}
+.pin-hint{font-family:var(--mono);font-size:10px;color:var(--muted2);text-align:center;}
+
+/* SIGNALEN */
+.signal-strip{display:flex;gap:6px;padding:10px 18px;border-bottom:1px solid var(--b1);overflow-x:auto;scrollbar-width:none;}
+.signal-strip::-webkit-scrollbar{display:none;}
+.sig-badge{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;font-weight:700;padding:5px 10px;border-radius:8px;white-space:nowrap;cursor:pointer;}
+.sig-buy{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);}
+.sig-sell{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);}
+.sig-neutral{background:rgba(245,158,11,.1);color:var(--orange);border:1px solid rgba(245,158,11,.2);}
+.sig-info{background:rgba(66,133,244,.1);color:var(--blue);border:1px solid rgba(66,133,244,.2);}
+
+/* UPGRADE/DOWNGRADE badges */
+.ud-item{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:var(--s2);border-radius:8px;}
+.ud-dir-up{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--gd);color:var(--green);flex-shrink:0;margin-top:2px;}
+.ud-dir-dn{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--rd);color:var(--red);flex-shrink:0;margin-top:2px;}
+.ud-dir-ne{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--od);color:var(--orange);flex-shrink:0;margin-top:2px;}
+.ud-body{flex:1;}
+.ud-firm{font-size:12px;font-weight:700;}
+.ud-grades{font-family:var(--mono);font-size:10px;color:var(--muted);}
+/* CALENDAR VIEW TOGGLE */
+.cal-view-btn{font-family:var(--mono);font-size:10px;font-weight:600;padding:6px 14px;color:var(--muted);cursor:pointer;background:transparent;transition:all .15s;user-select:none;}
+.cal-view-btn.active{background:var(--s2);color:var(--text);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cal-grid-hdr{font-family:var(--mono);font-size:9px;text-align:center;color:var(--muted);padding:4px 0;letter-spacing:.5px;}
+.cal-day-cell{min-height:52px;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:4px;cursor:pointer;transition:background .1s;position:relative;}
+.cal-day-cell:active{background:var(--s2);}
+.cal-day-cell.today{border-color:var(--green);}
+.cal-day-cell.other-month{opacity:.35;}
+.cal-day-num{font-family:var(--mono);font-size:10px;font-weight:700;margin-bottom:2px;}
+.cal-day-cell.today .cal-day-num{color:var(--green);}
+.cal-event-dot{display:block;font-size:8px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:2px;padding:0 2px;margin-bottom:1px;}
+.cal-year-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.cal-month-card{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:10px;cursor:pointer;}
+.cal-month-card:active{background:var(--s2);}
+.cal-month-name{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.5px;}
+.cal-month-events{display:flex;flex-direction:column;gap:3px;}
+.cal-month-event{font-size:10px;padding:2px 6px;border-radius:4px;border-left:2px solid;}
+/* WATCHLIST */
+.wl-title{font-size:20px;font-weight:700;}
+.wl-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;}
+.wl-add-btn{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;padding:8px 16px;border-radius:20px;border:1px solid var(--green);background:var(--gd);color:var(--green);cursor:pointer;transition:all .15s;}
+.wl-add-btn:active{transform:scale(.95);}
+.wl-filters{display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none;}
+.wl-filters::-webkit-scrollbar{display:none;}
+.wlf{font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 14px;border-radius:20px;border:1px solid var(--b1);background:var(--s1);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;}
+.wlf.active{border-color:var(--blue);color:var(--blue);background:rgba(66,133,244,.08);}
+.wl-list{padding:0 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:16px;}
+.wl-card{background:var(--s1);border:1px solid var(--b1);border-radius:16px;overflow:hidden;position:relative;transition:all .18s;}
+.wl-card:active{transform:scale(.98);}
+.wl-stripe{position:absolute;top:0;left:0;bottom:0;width:3px;}
+.wl-top{display:flex;align-items:center;gap:12px;padding:12px 14px 10px 18px;}
+.wl-logo{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:800;font-size:9px;color:#fff;flex-shrink:0;}
+.wl-info{flex:1;}
+.wl-name{font-size:13px;font-weight:700;line-height:1.2;}
+.wl-ticker{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.wl-price-block{text-align:right;}
+.wl-price{font-family:var(--mono);font-size:16px;font-weight:800;}
+.wl-chg{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;display:inline-block;margin-top:2px;}
+.wl-actions{display:flex;gap:1px;background:var(--b1);}
+.wl-action{flex:1;padding:8px 6px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);cursor:pointer;background:var(--s1);transition:all .15s;}
+.wl-action:hover{background:var(--s2);color:var(--text);}
+.wl-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b1);}
+.wlm{background:var(--s1);padding:8px 10px;}
+.wlm-l{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:2px;}
+.wlm-v{font-family:var(--mono);font-size:11px;font-weight:700;}
+.wl-note{padding:8px 14px 10px;font-size:11px;color:var(--muted);font-style:italic;border-top:1px solid var(--b1);}
+.wl-empty{padding:40px 20px;text-align:center;}
+.wl-empty-icon{font-size:36px;margin-bottom:10px;}
+.wl-empty-title{font-size:16px;font-weight:700;margin-bottom:6px;}
+.wl-empty-sub{font-size:13px;color:var(--muted);line-height:1.6;}
+.wl-spark{padding:0 14px 2px 18px;}
+.wl-news-preview{padding:8px 14px 10px;border-top:1px solid var(--b1);}
+.wl-news-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--b1);}
+.wl-news-item:last-child{border-bottom:none;}
+.wl-news-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:5px;}
+.wl-news-title{font-size:11px;line-height:1.4;cursor:pointer;color:var(--text);}
+.wl-news-title:hover{color:var(--blue);}
+.wl-news-date{font-family:var(--mono);font-size:9px;color:var(--muted2);flex-shrink:0;}
+.wl-section-hdr{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:12px 16px 6px;}
 </style>
 </head>
 <body>
+
+<!-- PIN OVERLAY — verbergt positie-informatie -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-logo">PORT<em>.</em>FOLIO</div>
+  <div>
+    <div class="pin-title">🔒 Persoonlijke data</div>
+    <div class="pin-sub" style="margin-top:4px;">Voer je pincode in om posities te bekijken</div>
+  </div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-pad">
+    <div class="pin-key" onclick="pinKey('1')">1</div>
+    <div class="pin-key" onclick="pinKey('2')">2</div>
+    <div class="pin-key" onclick="pinKey('3')">3</div>
+    <div class="pin-key" onclick="pinKey('4')">4</div>
+    <div class="pin-key" onclick="pinKey('5')">5</div>
+    <div class="pin-key" onclick="pinKey('6')">6</div>
+    <div class="pin-key" onclick="pinKey('7')">7</div>
+    <div class="pin-key" onclick="pinKey('8')">8</div>
+    <div class="pin-key" onclick="pinKey('9')">9</div>
+    <div class="pin-key empty"></div>
+    <div class="pin-key" onclick="pinKey('0')">0</div>
+    <div class="pin-key del" onclick="pinDel()">⌫</div>
+  </div>
+  <div class="pin-hint">Publieke info (koersen, nieuws, grafiek) is zichtbaar zonder pin<br>Eerste gebruik: stel je pincode in door 4 cijfers te kiezen</div>
+</div>
 
 <div class="topbar">
   <div class="logo">PORT<em>.</em>FOLIO</div>
@@ -260,6 +422,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15
     <div class="live-badge"><div class="live-dot"></div>LADEN...</div>
     <div class="icon-btn" title="Aandeel toevoegen" onclick="openAddTicker()">➕</div>
     <div class="icon-btn" title="Sync met cloud" onclick="syncNow()">🔄</div>
+    <div class="icon-btn" title="Vergrendelen" onclick="lockDashboard()">🔒</div>
     <div class="icon-btn" onclick="openDrawer()">⚙️</div>
   </div>
 </div>
@@ -317,71 +480,59 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15
 
 <!-- CALENDAR PAGE -->
 <div class="page" id="page-calendar">
-  <div class="cal-wrap">
-    <div class="cal-sec-hdr">AANKOMENDE EVENTS · PORTEFEUILLE</div>
-    <div class="cal-item" style="border-color:rgba(239,68,68,.35);">
-      <div class="cal-date-block"><div class="cal-day" style="color:var(--red);">6</div><div class="cal-month">MEI</div></div>
-      <div class="cal-div"></div>
-      <div class="cal-info"><div class="cal-title">Infineon Q2 FY2026 Earnings</div><div class="cal-sub">IFX · Vandaag na beurs · RSI 78 overbought · resultaten automotief + industrial</div>
-        <div style="margin-top:4px;"><a href="https://finance.yahoo.com/quote/IFX.DE/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">IFX.DE Yahoo Finance →</a></div>
-      </div>
-      <div class="cal-badge cb-u">VANDAAG</div>
+  <!-- Calendar header with view toggle -->
+  <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-size:18px;font-weight:700;">📅 Kalender</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;" id="cal-period-label"></div>
     </div>
-    <div class="cal-item" style="border-color:rgba(245,158,11,.35);">
-      <div class="cal-date-block"><div class="cal-day" style="color:var(--orange);">11</div><div class="cal-month">MEI</div></div>
-      <div class="cal-div"></div>
-      <div class="cal-info"><div class="cal-title">Apple Dividend Ex-Datum</div><div class="cal-sub">AAPL · $0,27/aandeel · kwartaaldividend · uitbetaling 15 mei</div>
-        <div style="margin-top:4px;"><a href="https://finance.yahoo.com/quote/AAPL/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">AAPL Yahoo Finance →</a></div>
+    <div style="display:flex;gap:6px;">
+      <div style="display:flex;border:1px solid var(--b1);border-radius:20px;overflow:hidden;">
+        <div class="cal-view-btn active" id="cvb-week" onclick="setCalView('week',this)">Week</div>
+        <div class="cal-view-btn" id="cvb-month" onclick="setCalView('month',this)">Maand</div>
+        <div class="cal-view-btn" id="cvb-year" onclick="setCalView('year',this)">Jaar</div>
       </div>
-      <div class="cal-badge cb-d">DIVIDEND</div>
     </div>
-    <div class="cal-item" style="border-color:rgba(232,160,32,.35);">
-      <div class="cal-date-block"><div class="cal-day" style="color:#e8a020;">20</div><div class="cal-month">MEI</div></div>
-      <div class="cal-div"></div>
-      <div class="cal-info"><div class="cal-title">Ackermans Q1 2026 Trading Update</div><div class="cal-sub">ACKB · Voor beurs · DEME offshore + Delen PB Q1 instroom in focus</div>
-        <div style="margin-top:4px;"><a href="https://finance.yahoo.com/quote/AKA.BR/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">AKA.BR Yahoo Finance →</a>&nbsp;<a href="https://www.ackermansvanhaaren.be/nl/investeerders/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">IR Website →</a></div>
-      </div>
-      <div class="cal-badge cb-e">EARNINGS</div>
+  </div>
+  <!-- Nav arrows -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 8px;">
+    <div onclick="calNav(-1)" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--b1);background:var(--s1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;">‹</div>
+    <div style="font-family:var(--mono);font-size:12px;font-weight:700;" id="cal-nav-label"></div>
+    <div onclick="calNav(1)" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--b1);background:var(--s1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;">›</div>
+  </div>
+  <!-- Type filters -->
+  <div style="display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none;">
+    <div class="wlf active" id="calf-all"   onclick="setCalFilter('all',this)">Alles</div>
+    <div class="wlf" id="calf-earn"  onclick="setCalFilter('earn',this)"  style="color:#22c55e;">● Earnings</div>
+    <div class="wlf" id="calf-div"   onclick="setCalFilter('div',this)"   style="color:#f59e0b;">● Dividend</div>
+    <div class="wlf" id="calf-macro" onclick="setCalFilter('macro',this)" style="color:#ef4444;">● Macro</div>
+    <div class="wlf" id="calf-cat"   onclick="setCalFilter('cat',this)"   style="color:#4285f4;">● Event</div>
+  </div>
+  <!-- Calendar body -->
+  <div id="cal-body" style="padding:0 16px 16px;"></div>
+</div>
+
+<!-- WATCHLIST PAGE -->
+<div class="page" id="page-watchlist">
+  <div class="wl-header">
+    <div>
+      <div class="wl-title">👁 Watchlist</div>
+      <div class="wl-sub">Aandelen volgen zonder positie</div>
     </div>
-    <div class="cal-item">
-      <div class="cal-date-block"><div class="cal-day" style="color:var(--purple);">Jun</div><div class="cal-month">2026</div></div>
-      <div class="cal-div"></div>
-      <div class="cal-info"><div class="cal-title">Sofina H1 2026 NAV Update</div><div class="cal-sub">SOF · Rond september · evolutie private equity portefeuille · ~€10,5B AuM</div>
-        <div style="margin-top:4px;"><a href="https://finance.yahoo.com/quote/SOF.BR/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">SOF.BR Yahoo Finance →</a>&nbsp;<a href="https://www.sofinagroup.com/en/investors" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">IR Website →</a></div>
-      </div>
-      <div class="cal-badge cb-e">UPDATE</div>
-    </div>
-    <div class="cal-item" style="border-color:rgba(170,170,170,.2);">
-      <div class="cal-date-block"><div class="cal-day" style="color:#c0c0c0;">9</div><div class="cal-month">JUN</div></div>
-      <div class="cal-div"></div>
-      <div class="cal-info"><div class="cal-title">Apple WWDC 2026</div><div class="cal-sub">AAPL · 9–13 juni · Siri 2.0, Apple Intelligence updates · kans op koersstijging</div>
-        <div style="margin-top:4px;"><a href="https://developer.apple.com/wwdc26/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">Apple WWDC →</a></div>
-      </div>
-      <div class="cal-badge cb-c">KATALYSATOR</div>
-    </div>
-    <div class="cal-item" style="border-color:rgba(66,133,244,.35);">
-      <div class="cal-date-block"><div class="cal-day" style="color:var(--blue);">Jul</div><div class="cal-month">2026</div></div>
-      <div class="cal-div"></div>
-      <div class="cal-info"><div class="cal-title">Alphabet Q2 2026 Earnings</div><div class="cal-sub">GOOGL · Late juli · Cloud backlog conversie · DOJ antitrust update</div>
-        <div style="margin-top:4px;"><a href="https://finance.yahoo.com/quote/GOOGL/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">GOOGL Yahoo Finance →</a>&nbsp;<a href="https://abc.xyz/investor/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">Alphabet IR →</a></div>
-      </div>
-      <div class="cal-badge cb-e">EARNINGS</div>
-    </div>
-    <div class="cal-item" style="border-color:rgba(170,170,170,.15);">
-      <div class="cal-date-block"><div class="cal-day" style="color:#c0c0c0;">Jul</div><div class="cal-month">2026</div></div>
-      <div class="cal-div"></div>
-      <div class="cal-info"><div class="cal-title">Apple Q3 FY2026 Earnings</div><div class="cal-sub">AAPL · Eind juli · CEO-transitie update · WWDC follow-through</div>
-        <div style="margin-top:4px;"><a href="https://investor.apple.com/sec-filings/annual-reports/default.aspx" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">Apple IR →</a></div>
-      </div>
-      <div class="cal-badge cb-e">EARNINGS</div>
-    </div>
-    <div class="cal-item">
-      <div class="cal-date-block"><div class="cal-day" style="color:var(--green);">Aug</div><div class="cal-month">2026</div></div>
-      <div class="cal-div"></div>
-      <div class="cal-info"><div class="cal-title">Infineon Q3 FY2026 + Sofina H1</div><div class="cal-sub">IFX + SOF · augustus cyclus · EV-herstel check + NAV evolutie Sofina</div>
-        <div style="margin-top:4px;"><a href="https://www.infineon.com/cms/en/about-infineon/investor/" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">Infineon IR →</a></div>
-      </div>
-      <div class="cal-badge cb-e">EARNINGS</div>
+    <div class="wl-add-btn" onclick="openAddWatchlist()">➕ Toevoegen</div>
+  </div>
+  <div class="wl-filters">
+    <div class="wlf active" onclick="setWlFilter('all',this)">Alles</div>
+    <div class="wlf" onclick="setWlFilter('winners',this)">📈 Stijgers</div>
+    <div class="wlf" onclick="setWlFilter('losers',this)">📉 Dalers</div>
+    <div class="wlf" onclick="setWlFilter('buy',this)">⭐ Koop Rating</div>
+    <div class="wlf" onclick="setWlFilter('upside',this)">🎯 Meeste Upside</div>
+  </div>
+  <div class="wl-list" id="wl-list">
+    <div class="wl-empty">
+      <div class="wl-empty-icon">👁</div>
+      <div class="wl-empty-title">Watchlist is leeg</div>
+      <div class="wl-empty-sub">Voeg aandelen toe die je wil volgen.<br>Tik ➕ Toevoegen om te beginnen.</div>
     </div>
   </div>
 </div>
@@ -390,6 +541,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15
 <div class="bottom-nav">
   <div class="bnav active" id="nav-overview" onclick="showPage('overview')"><div class="bnav-icon">📊</div><div class="bnav-lbl">OVERZICHT</div></div>
   <div class="bnav" id="nav-detail" onclick="showPage('detail')"><div class="bnav-icon">📈</div><div class="bnav-lbl">DETAIL</div></div>
+  <div class="bnav" id="nav-watchlist" onclick="showPage('watchlist')"><div class="bnav-icon">👁</div><div class="bnav-lbl">WATCHLIST</div></div>
   <div class="bnav" id="nav-calendar" onclick="showPage('calendar')"><div class="bnav-icon">📅</div><div class="bnav-lbl">KALENDER</div></div>
 </div>
 
@@ -686,6 +838,138 @@ async function sbUpsert(table, rows) {
   if (!r.ok) throw new Error(`UPSERT ${r.status}: ${await r.text()}`);
 }
 
+async function sbDelete(table, filter) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${filter}`, {
+    method:  'DELETE',
+    headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }
+  });
+  if (!r.ok) throw new Error(`DELETE ${r.status}: ${await r.text()}`);
+}
+
+// ─── INDICATOR TEMPLATE SYSTEEM ───────────────────────────────────────────────
+// SQL om uit te voeren in Supabase (eenmalig):
+// CREATE TABLE IF NOT EXISTS indicator_templates (
+//   id TEXT PRIMARY KEY,
+//   name TEXT NOT NULL,
+//   indicators TEXT NOT NULL,
+//   settings TEXT NOT NULL,
+//   created_at TIMESTAMPTZ DEFAULT NOW()
+// );
+// ALTER TABLE indicator_templates ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY "public_all" ON indicator_templates FOR ALL USING (true) WITH CHECK (true);
+
+const DEFAULT_TEMPLATES = [
+  {
+    id: 'trend',
+    name: '📈 Trend Following',
+    indicators: ['ma20','ma50','ma200','vol'],
+    settings: { ma20:20, ma50:50, ma200:200, ema1:12, ema2:26, rsiPer:14, bbPer:20, bbMult:2 }
+  },
+  {
+    id: 'momentum',
+    name: '⚡ Momentum',
+    indicators: ['ema1','ema2','rsi','vol'],
+    settings: { ma20:20, ma50:50, ma200:200, ema1:9, ema2:21, rsiPer:14, bbPer:20, bbMult:2 }
+  },
+  {
+    id: 'volatility',
+    name: '🌊 Volatiliteit',
+    indicators: ['bb','vol','rsi'],
+    settings: { ma20:20, ma50:50, ma200:200, ema1:12, ema2:26, rsiPer:14, bbPer:20, bbMult:2 }
+  },
+  {
+    id: 'swing',
+    name: '🔄 Swing Trading',
+    indicators: ['ma20','ma50','bb','rsi','vol'],
+    settings: { ma20:10, ma50:20, ma200:50, ema1:5, ema2:13, rsiPer:9, bbPer:14, bbMult:2 }
+  },
+  {
+    id: 'scalp',
+    name: '⚡ Scalping (EMA)',
+    indicators: ['ema1','ema2','rsi','vol'],
+    settings: { ma20:20, ma50:50, ma200:200, ema1:5, ema2:13, rsiPer:7, bbPer:20, bbMult:2 }
+  },
+];
+
+let savedTemplates = [...DEFAULT_TEMPLATES];
+
+async function loadTemplates() {
+  // First try localStorage (instant)
+  try {
+    const local = JSON.parse(localStorage.getItem('indicator_templates') || '[]');
+    if (local.length > 0) {
+      const ids = new Set(local.map(t => t.id));
+      savedTemplates = [...DEFAULT_TEMPLATES.filter(t => !ids.has(t.id)), ...local.map(t => ({...t, custom:true}))];
+    }
+  } catch(e) {}
+
+  // Then try Supabase (authoritative)
+  try {
+    const data = await sbGet('indicator_templates', 'select=id,name,indicators,settings&order=created_at');
+    if (data && data.length > 0) {
+      const custom = data.map(row => ({
+        id:         row.id,
+        name:       row.name,
+        indicators: JSON.parse(row.indicators),
+        settings:   JSON.parse(row.settings),
+        custom:     true,
+      }));
+      const ids = new Set(custom.map(t => t.id));
+      savedTemplates = [...DEFAULT_TEMPLATES.filter(t => !ids.has(t.id)), ...custom];
+      // Sync back to localStorage
+      localStorage.setItem('indicator_templates', JSON.stringify(custom));
+    }
+  } catch(e) {
+    console.warn('Templates laden uit Supabase mislukt, gebruik lokale data:', e.message);
+  }
+}
+
+async function saveTemplate(name, ticker) {
+  const cs  = getCS(ticker);
+  const id  = 'tpl_' + Date.now();
+  const tpl = {
+    id,
+    name,
+    indicators: JSON.stringify([...cs.indicators]),
+    settings:   JSON.stringify(cs.settings),
+    created_at: new Date().toISOString(),
+  };
+  try {
+    await sbUpsert('indicator_templates', [tpl]);
+    savedTemplates.push({ id, name, indicators: [...cs.indicators], settings: { ...cs.settings }, custom: true });
+    showDbStatus(`✓ Sjabloon "${name}" opgeslagen`, 'green');
+  } catch(e) {
+    // Fallback: sla op in localStorage
+    const local = JSON.parse(localStorage.getItem('indicator_templates') || '[]');
+    local.push({ id, name, indicators: [...cs.indicators], settings: { ...cs.settings }, custom: true });
+    localStorage.setItem('indicator_templates', JSON.stringify(local));
+    savedTemplates.push({ id, name, indicators: [...cs.indicators], settings: { ...cs.settings }, custom: true });
+    showDbStatus(`✓ Sjabloon "${name}" lokaal opgeslagen`, 'orange');
+  }
+}
+
+async function deleteTemplate(id) {
+  try {
+    await sbDelete('indicator_templates', `id=eq.${id}`);
+  } catch(e) {
+    const local = JSON.parse(localStorage.getItem('indicator_templates') || '[]');
+    localStorage.setItem('indicator_templates', JSON.stringify(local.filter(t => t.id !== id)));
+  }
+  savedTemplates = savedTemplates.filter(t => t.id !== id);
+  showDbStatus('✓ Sjabloon verwijderd', 'green');
+}
+
+function applyTemplate(tpl, ticker) {
+  if (!tpl) { showDbStatus('Sjabloon niet gevonden', 'orange'); return; }
+  const cs = getCS(ticker);
+  cs.indicators = new Set(tpl.indicators);
+  cs.settings   = { ...cs.settings, ...tpl.settings };
+  document.getElementById('chart-settings-modal')?.remove();
+  drawChart(ticker);
+  refreshIndicatorButtons(ticker);
+  showDbStatus(`✓ "${tpl.name}" toegepast`, 'green');
+}
+
 // ─── POSITIONS & TICKERS (dynamic — loaded from Supabase) ────────────────────
 let positions = {};
 let activeStock='AAPL', activePage='overview', ovMode='rendement', chartPeriod='1J';
@@ -704,189 +988,116 @@ const STOCK_META = {
 let liveData = {};  // { AAPL: { price, chg, chgNum, dir, wkH, wkL, pe, mktcap, analystLow, analystMid, analystHigh, analystCount, ... } }
 
 // ─── YAHOO FINANCE — MULTI-PROXY FALLBACK ────────────────────────────────────
-// ─── FINNHUB API CONFIG ───────────────────────────────────────────────────────
-const FH_KEY  = 'd81im41r01qrojfbo940d81im41r01qrojfbo94g';
-const FH_BASE = 'https://finnhub.io/api/v1';
-
-// Finnhub symbolen — Europese aandelen: EXCHANGE:TICKER
-const FH_SYMBOL = {
-  AAPL:  'AAPL',
-  GOOGL: 'GOOGL',
-  ACKB:  'EURONEXT:AKA',
-  SOF:   'EURONEXT:SOF',
-  IFX:   'XETRA:IFX',
+// ─── QUOTE API — via eigen Netlify serverfunction ────────────────────────────
+// Europese symbolen voor Yahoo Finance
+const YF_SYM = {
+  AAPL:'AAPL', GOOGL:'GOOGL', ACKB:'AKA.BR', SOF:'SOF.BR', IFX:'IFX.DE'
 };
 
-// ─── QUOTE OPHALEN (1 per ticker, parallel) ──────────────────────────────────
-async function fetchQuote(fhSym) {
+async function fetchAllQuotes(tickers) {
+  const syms = tickers.map(t => YF_SYM[t] || t).join(',');
   const r = await fetch(
-    `${FH_BASE}/quote?symbol=${encodeURIComponent(fhSym)}&token=${FH_KEY}`,
-    { signal: AbortSignal.timeout(8000) }
+    `/.netlify/functions/quotes?symbols=${encodeURIComponent(syms)}`,
+    { signal: AbortSignal.timeout(15000) }
   );
-  if (!r.ok) throw new Error(`Finnhub ${r.status}`);
-  const d = await r.json();
-  // Finnhub returns {c: price, h: high, l: low, o: open, pc: prevClose, d: change, dp: changePct, t: timestamp}
-  if (!d || d.c === 0) throw new Error('Geen data');
-  return d;
+  if (!r.ok) throw new Error(`API ${r.status}`);
+  return r.json(); // { 'AAPL': {...}, 'AKA.BR': {...}, ... }
 }
 
-async function fetchProfile(fhSym) {
-  try {
-    const r = await fetch(
-      `${FH_BASE}/stock/profile2?symbol=${encodeURIComponent(fhSym)}&token=${FH_KEY}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if (!r.ok) return null;
-    return r.json();
-  } catch(e) { return null; }
-}
-
-async function fetchMetrics(fhSym) {
-  try {
-    const r = await fetch(
-      `${FH_BASE}/stock/metric?symbol=${encodeURIComponent(fhSym)}&metric=all&token=${FH_KEY}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if (!r.ok) return null;
-    return r.json();
-  } catch(e) { return null; }
-}
-
-async function fetchRecommendation(fhSym) {
-  try {
-    const r = await fetch(
-      `${FH_BASE}/stock/recommendation?symbol=${encodeURIComponent(fhSym)}&token=${FH_KEY}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if (!r.ok) return null;
-    const arr = await r.json();
-    return Array.isArray(arr) && arr.length ? arr[0] : null;
-  } catch(e) { return null; }
-}
-
-async function fetchPriceTarget(fhSym) {
-  try {
-    const r = await fetch(
-      `${FH_BASE}/stock/price-target?symbol=${encodeURIComponent(fhSym)}&token=${FH_KEY}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if (!r.ok) return null;
-    return r.json();
-  } catch(e) { return null; }
-}
-
-// ─── ALLE LIVE PRIJZEN OPHALEN ────────────────────────────────────────────────
 async function fetchLivePrices() {
   const tickers = Object.keys(STOCKS);
   let anySuccess = false;
+  let data = {};
 
-  await Promise.allSettled(tickers.map(async t => {
-    const fhSym = FH_SYMBOL[t] || t;
-    try {
-      // Parallel: quote + metrics + recommendation + price target
-      const [quote, metrics, rec, target] = await Promise.all([
-        fetchQuote(fhSym),
-        fetchMetrics(fhSym),
-        fetchRecommendation(fhSym),
-        fetchPriceTarget(fhSym),
-      ]);
+  try {
+    data = await fetchAllQuotes(tickers);
+  } catch(e) {
+    console.warn('Quote fetch mislukt:', e.message);
+    showDbStatus('⚠️ Koersen tijdelijk niet beschikbaar', 'orange');
+    return false;
+  }
 
-      if (!quote || quote.c === 0) return;
-
-      const price   = quote.c;
-      const chgAbs  = quote.d  ?? 0;
-      const chgPct  = quote.dp ?? 0;   // Finnhub geeft % als getal (bv. 1.35)
-      const wkH     = metrics?.metric?.['52WeekHigh'] ?? STOCKS[t].wkH;
-      const wkL     = metrics?.metric?.['52WeekLow']  ?? STOCKS[t].wkL;
-      const pe      = metrics?.metric?.peBasicExclExtraTTM;
-      const eps     = metrics?.metric?.epsBasicExclExtraAnnual;
-      const beta    = metrics?.metric?.beta;
-      const divY    = metrics?.metric?.currentDividendYieldTTM;
-      const roe     = metrics?.metric?.roeTTM;
-      const grossM  = metrics?.metric?.grossMarginTTM;
-      const mktcap  = metrics?.metric?.marketCapitalization;
-
-      const mktcapFmt = mktcap
-        ? (mktcap > 1e6  ? (mktcap/1e6).toFixed(1)+'T'
-         : mktcap > 1e3  ? (mktcap/1e3).toFixed(1)+'B'
-         :                  mktcap.toFixed(0)+'M')
-        : '—';
-
-      const daysUp  = chgAbs >= 0 ? 'up' : 'dn';
-      const pctStr  = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
-      const cur     = STOCKS[t].cur;
-
-      // Patch STOCKS
-      STOCKS[t].price  = price;
-      STOCKS[t].chg    = pctStr;
-      STOCKS[t].chgNum = chgPct;
-      STOCKS[t].dir    = daysUp;
-      STOCKS[t].wkH    = wkH;
-      STOCKS[t].wkL    = wkL;
-
-      STOCKS[t].ratios = {
-        ...STOCKS[t].ratios,
-        'P/E (TTM)': pe    ? pe.toFixed(1)+'×'          : (STOCKS[t].ratios?.['P/E (TTM)'] ?? '—'),
-        'EPS':       eps   ? cur+eps.toFixed(2)          : '—',
-        'Beta':      beta  ? beta.toFixed(2)             : (STOCKS[t].ratios?.['Beta'] ?? '—'),
-        'Div. Yield':divY  ? (divY*100).toFixed(2)+'%'  : (STOCKS[t].ratios?.['Div. Yield'] ?? '—'),
-        'Brutomarge':grossM? (grossM*100).toFixed(1)+'%': '—',
-        'ROE':       roe   ? (roe).toFixed(1)+'%'        : '—',
-        'Mktcap':    mktcapFmt,
-        '52w Laag':  cur + (wkL?.toFixed(2) ?? '—'),
-        '52w Hoog':  cur + (wkH?.toFixed(2) ?? '—'),
-        'Dag Hoog':  cur + (quote.h?.toFixed(2) ?? '—'),
-        'Dag Laag':  cur + (quote.l?.toFixed(2)  ?? '—'),
-      };
-
-      // Analyst data
-      if (STOCKS[t].analysts) {
-        if (target?.targetHigh)  STOCKS[t].analysts.highTarget = Math.round(target.targetHigh);
-        if (target?.targetMean)  STOCKS[t].analysts.avgTarget  = Math.round(target.targetMean);
-        if (target?.targetLow)   STOCKS[t].analysts.lowTarget  = Math.round(target.targetLow);
-        if (rec) {
-          const buy  = (rec.strongBuy  ?? 0) + (rec.buy  ?? 0);
-          const hold = rec.hold  ?? 0;
-          const sell = (rec.strongSell ?? 0) + (rec.sell ?? 0);
-          const tot  = buy + hold + sell;
-          if (tot > 0) {
-            STOCKS[t].analysts.buy   = buy;
-            STOCKS[t].analysts.hold  = hold;
-            STOCKS[t].analysts.sell  = sell;
-            STOCKS[t].analysts.total = tot;
-            STOCKS[t].analysts.consensus =
-              buy/tot > 0.6  ? 'Sterk Kopen'
-            : buy/tot > 0.4  ? 'Kopen'
-            : sell/tot > 0.4 ? 'Verkopen'
-            :                  'Houden';
-          }
-        }
-      }
-
-      liveData[t] = { price, chgAbs, chgPct, dir: daysUp };
-      anySuccess  = true;
-
-    } catch(e) {
-      console.warn(`Finnhub mislukt voor ${t} (${fhSym}):`, e.message);
+  tickers.forEach(t => {
+    const sym = YF_SYM[t] || t;
+    const d   = data[sym];
+    if (!d || d.error || !d.price) {
+      console.warn(`Geen data voor ${t}:`, d?.error);
+      return;
     }
-  }));
+
+    const price   = d.price;
+    const chgAbs  = d.chgAbs ?? 0;
+    const chgPct  = d.chgPct ?? 0;   // al als percentage bv. 1.35
+    const wkH     = d.wkHigh  ?? STOCKS[t].wkH;
+    const wkL     = d.wkLow   ?? STOCKS[t].wkL;
+    const cur     = d.currency === 'EUR' ? '€' : STOCKS[t].cur;
+    const daysUp  = chgAbs >= 0 ? 'up' : 'dn';
+    const pctStr  = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
+
+    const mktcap = d.mktCap
+      ? (d.mktCap >= 1e12 ? (d.mktCap/1e12).toFixed(2)+'T'
+       : d.mktCap >= 1e9  ? (d.mktCap/1e9).toFixed(1)+'B'
+       :                     (d.mktCap/1e6).toFixed(0)+'M')
+      : '—';
+
+    // Patch STOCKS
+    STOCKS[t].price  = price;
+    STOCKS[t].chg    = pctStr;
+    STOCKS[t].chgNum = chgPct;
+    STOCKS[t].dir    = daysUp;
+    STOCKS[t].wkH    = wkH;
+    STOCKS[t].wkL    = wkL;
+    STOCKS[t].cur    = cur;
+
+    STOCKS[t].ratios = {
+      ...STOCKS[t].ratios,
+      'P/E (TTM)':  d.pe         ? d.pe+'×'          : (STOCKS[t].ratios?.['P/E (TTM)'] ?? '—'),
+      'P/E Fwd':    d.forwardPE   ? d.forwardPE+'×'   : (STOCKS[t].ratios?.['P/E Fwd']  ?? '—'),
+      'Beta':       d.beta        ? ''+d.beta          : (STOCKS[t].ratios?.['Beta']      ?? '—'),
+      'Div. Yield': d.divYield    ? d.divYield+'%'     : (STOCKS[t].ratios?.['Div. Yield']?? '—'),
+      'Brutomarge': d.grossMargin ? d.grossMargin+'%'  : '—',
+      'Winstmarge': d.profitMargin? d.profitMargin+'%' : '—',
+      'ROE':        d.roe         ? d.roe+'%'          : '—',
+      'Mktcap':     mktcap,
+      '52w Laag':   cur + (wkL?.toFixed(2) ?? '—'),
+      '52w Hoog':   cur + (wkH?.toFixed(2) ?? '—'),
+      'Dag Hoog':   cur + (d.dayHigh?.toFixed(2) ?? '—'),
+      'Dag Laag':   cur + (d.dayLow?.toFixed(2)  ?? '—'),
+    };
+
+    if (STOCKS[t].analysts) {
+      if (d.targetLow)    STOCKS[t].analysts.lowTarget  = Math.round(d.targetLow);
+      if (d.targetMean)   STOCKS[t].analysts.avgTarget  = Math.round(d.targetMean);
+      if (d.targetHigh)   STOCKS[t].analysts.highTarget = Math.round(d.targetHigh);
+      if (d.numAnalysts)  STOCKS[t].analysts.total      = d.numAnalysts;
+      const buy  = (d.strongBuy ?? 0) + (d.buy  ?? 0);
+      const hold =  d.hold ?? 0;
+      const sell = (d.strongSell ?? 0) + (d.sell ?? 0);
+      const tot  = buy + hold + sell;
+      if (tot > 0) {
+        STOCKS[t].analysts.buy  = buy;
+        STOCKS[t].analysts.hold = hold;
+        STOCKS[t].analysts.sell = sell;
+        STOCKS[t].analysts.total = tot;
+        const rk = d.recKey || '';
+        STOCKS[t].analysts.consensus =
+          rk === 'strong_buy'   ? 'Sterk Kopen'
+        : rk === 'buy'          ? 'Kopen'
+        : rk === 'hold'         ? 'Houden'
+        : rk === 'underperform' ? 'Onderpresteren'
+        : rk === 'sell'         ? 'Verkopen'
+        : STOCKS[t].analysts.consensus;
+      }
+    }
+
+    liveData[t] = { price, chgAbs, chgPct, dir: daysUp };
+    anySuccess = true;
+  });
 
   return anySuccess;
 }
 
-// addTicker zoekt ook via Finnhub
-async function fetchAllQuotes(tickers) {
-  // Wrapper voor compatibiliteit met addTicker
-  const out = {};
-  await Promise.allSettled(tickers.map(async t => {
-    const fhSym = FH_SYMBOL[t] || t;
-    try {
-      const [q, p] = await Promise.all([fetchQuote(fhSym), fetchProfile(fhSym)]);
-      out[t] = { price: q?.c, name: p?.name, exchange: p?.exchange, currency: p?.currency };
-    } catch(e) { out[t] = { error: e.message }; }
-  }));
-  return out;
-}
+// ─── QUOTE OPHALEN (1 per ticker, parallel) ──────────────────────────────────
 
 // ─── AUTO REFRESH (every 5 min) ──────────────────────────────────────────────
 let refreshTimer = null;
@@ -967,8 +1178,237 @@ async function saveToSupabase() {
   localStorage.setItem('pf_pos_v2', JSON.stringify(positions));
 }
 
+// ─── PIN SYSTEEM ──────────────────────────────────────────────────────────────
+// PIN beschermt enkel de persoonlijke positie-info (qty, aankoopprijs, P&L)
+// Koersen, nieuws en grafieken blijven publiek zichtbaar
+
+// ─── PIN SYSTEEM ──────────────────────────────────────────────────────────────
+// PIN beschermt enkel de persoonlijke positie-info (qty, aankoopprijs, P&L)
+// Koersen, nieuws en grafieken blijven publiek zichtbaar
+// PIN wordt gesynchroniseerd via Supabase → werkt op alle toestellen
+
+const SESSION_KEY = 'pf_pin_session';
+let pinUnlocked   = false;
+let pinBuffer     = '';
+let pinHashStored = null; // geladen vanuit Supabase
+
+function hashPin(pin) {
+  let h = 0;
+  for (let i = 0; i < pin.length; i++) {
+    h = ((h << 5) - h) + pin.charCodeAt(i);
+    h |= 0;
+  }
+  return 'ph_' + Math.abs(h).toString(36) + pin.length;
+}
+
+// Laad PIN hash vanuit Supabase (of localStorage als fallback)
+async function loadPinHash() {
+  try {
+    const data = await sbGet('app_settings', 'select=value&key=eq.pin_hash');
+    if (data && data.length > 0) {
+      pinHashStored = data[0].value;
+      localStorage.setItem('pf_pin_hash', pinHashStored); // lokale backup
+      return pinHashStored;
+    }
+  } catch(e) {
+    // Tabel bestaat nog niet of geen verbinding — gebruik localStorage
+  }
+  return localStorage.getItem('pf_pin_hash') || null;
+}
+
+async function savePinHash(hash) {
+  pinHashStored = hash;
+  localStorage.setItem('pf_pin_hash', hash);
+  try {
+    await sbUpsert('app_settings', [{ key: 'pin_hash', value: hash }]);
+  } catch(e) {
+    // Tabel bestaat nog niet — maak hem aan of gebruik alleen localStorage
+    console.warn('PIN opslaan in Supabase mislukt — lokaal opgeslagen');
+  }
+}
+
+async function initPin() {
+  pinHashStored = await loadPinHash();
+  const session = sessionStorage.getItem(SESSION_KEY);
+
+  if (!pinHashStored) {
+    // Eerste gebruik — laat PIN instellen
+    document.getElementById('pin-overlay').style.display = 'flex';
+    return;
+  }
+
+  if (session === pinHashStored) {
+    // Al ontgrendeld in deze sessie
+    pinUnlocked = true;
+    document.getElementById('pin-overlay').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('pin-overlay').style.display = 'flex';
+}
+
+function pinKey(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += digit;
+  updatePinDots();
+  if (pinBuffer.length === 4) setTimeout(() => validatePin(), 150);
+}
+
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots();
+}
+
+function updatePinDots(error=false) {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('pd' + i);
+    if (dot) dot.className = 'pin-dot'+(i<pinBuffer.length?' filled':'')+(error?' error':'');
+  }
+}
+
+async function validatePin() {
+  const hash = hashPin(pinBuffer);
+
+  if (!pinHashStored) {
+    // Eerste keer — sla PIN op in Supabase + localStorage
+    await savePinHash(hash);
+    sessionStorage.setItem(SESSION_KEY, hash);
+    pinUnlocked = true;
+    document.getElementById('pin-overlay').style.display = 'none';
+    showDbStatus('✓ Pincode ingesteld en gesynchroniseerd op alle toestellen!', 'green');
+    renderSummary(); renderOverview();
+    if (activePage === 'detail') renderDetail(activeStock);
+    return;
+  }
+
+  if (hash === pinHashStored) {
+    sessionStorage.setItem(SESSION_KEY, pinHashStored);
+    pinUnlocked = true;
+    document.getElementById('pin-overlay').style.display = 'none';
+    renderSummary(); renderOverview();
+    if (activePage === 'detail') renderDetail(activeStock);
+  } else {
+    updatePinDots(true);
+    setTimeout(() => { pinBuffer = ''; updatePinDots(); }, 700);
+  }
+}
+
+// Pincode resetten (via URL ?resetpin=1)
+if (new URLSearchParams(location.search).get('resetpin') === '1') {
+  localStorage.removeItem('pf_pin_hash');
+  sessionStorage.removeItem(SESSION_KEY);
+  // Verwijder ook uit Supabase — async
+  sbDelete('app_settings', 'key=eq.pin_hash').catch(() => {});
+  history.replaceState({}, '', location.pathname);
+}
+
+// Keyboard support voor PIN
+document.addEventListener('keydown', e => {
+  const ov = document.getElementById('pin-overlay');
+  if (!ov || ov.style.display === 'none') return;
+  if (e.key >= '0' && e.key <= '9') pinKey(e.key);
+  if (e.key === 'Backspace') pinDel();
+});
+
+// ─── KOOP/VERKOOP SIGNALEN ENGINE ─────────────────────────────────────────────
+// DISCLAIMER: Dit zijn technische signalen, geen beleggingsadvies.
+// Gebruik ze als één van meerdere informatiebronnen, nooit als enige basis.
+
+function calcSignals(candles, settings) {
+  if (!candles || candles.length < 30) return [];
+  const closes  = candles.map(c => c.c);
+  const cfg     = settings || { ma20:20, ma50:50, ema1:12, ema2:26, rsiPer:14, bbPer:20, bbMult:2 };
+  const signals = [];
+
+  const last    = closes.length - 1;
+  const price   = closes[last];
+
+  // 1. RSI signalen
+  const rsiVals = calcRSI(closes, cfg.rsiPer);
+  const rsi     = rsiVals[last];
+  const rsiPrev = rsiVals[last-1];
+  if (rsi !== null) {
+    if (rsi < 30 && rsiPrev >= 30) {
+      signals.push({ type:'buy', icon:'📊', label:`RSI Oversold (${rsi.toFixed(0)})`, detail:'RSI kruist onder 30 — mogelijke koopkans', strength:2 });
+    } else if (rsi > 70 && rsiPrev <= 70) {
+      signals.push({ type:'sell', icon:'📊', label:`RSI Overbought (${rsi.toFixed(0)})`, detail:'RSI kruist boven 70 — mogelijke verkoopkans', strength:2 });
+    } else if (rsi < 30) {
+      signals.push({ type:'buy', icon:'📊', label:`RSI Oversold (${rsi.toFixed(0)})`, detail:'RSI blijft onder 30 — oversold zone', strength:1 });
+    } else if (rsi > 70) {
+      signals.push({ type:'sell', icon:'📊', label:`RSI Overbought (${rsi.toFixed(0)})`, detail:'RSI blijft boven 70 — overbought zone', strength:1 });
+    }
+  }
+
+  // 2. EMA Crossover (Golden/Death Cross)
+  const ema12 = calcEMA(closes, cfg.ema1);
+  const ema26 = calcEMA(closes, cfg.ema2);
+  if (ema12[last] && ema26[last] && ema12[last-1] && ema26[last-1]) {
+    if (ema12[last] > ema26[last] && ema12[last-1] <= ema26[last-1]) {
+      signals.push({ type:'buy', icon:'✨', label:`EMA${cfg.ema1}/${cfg.ema2} Golden Cross`, detail:`EMA${cfg.ema1} kruist boven EMA${cfg.ema2} — bullish signaal`, strength:3 });
+    } else if (ema12[last] < ema26[last] && ema12[last-1] >= ema26[last-1]) {
+      signals.push({ type:'sell', icon:'💀', label:`EMA${cfg.ema1}/${cfg.ema2} Death Cross`, detail:`EMA${cfg.ema1} kruist onder EMA${cfg.ema2} — bearish signaal`, strength:3 });
+    }
+  }
+
+  // 3. SMA Trend
+  const sma20 = calcSMA(closes, cfg.ma20);
+  const sma50 = calcSMA(closes, cfg.ma50);
+  if (sma20[last] && sma50[last]) {
+    if (price > sma20[last] && price > sma50[last]) {
+      signals.push({ type:'buy', icon:'📈', label:'Boven SMA20 & SMA50', detail:'Prijs boven beide voortschrijdende gemiddelden — opwaartse trend', strength:1 });
+    } else if (price < sma20[last] && price < sma50[last]) {
+      signals.push({ type:'sell', icon:'📉', label:'Onder SMA20 & SMA50', detail:'Prijs onder beide voortschrijdende gemiddelden — neerwaartse trend', strength:1 });
+    }
+  }
+
+  // 4. Bollinger Band signals
+  const bb = calcBollinger(closes, cfg.bbPer, cfg.bbMult);
+  const bbNow = bb[last];
+  const bbPrev = bb[last-1];
+  if (bbNow && bbPrev) {
+    if (price <= bbNow.lower && closes[last-1] > bbPrev.lower) {
+      signals.push({ type:'buy', icon:'🌊', label:'Bollinger Band Doorbraak Laag', detail:'Prijs doorbreekt onderste Bollinger Band — mogelijke rebound', strength:2 });
+    } else if (price >= bbNow.upper && closes[last-1] < bbPrev.upper) {
+      signals.push({ type:'sell', icon:'🌊', label:'Bollinger Band Doorbraak Hoog', detail:'Prijs doorbreekt bovenste Bollinger Band — mogelijke correctie', strength:2 });
+    }
+  }
+
+  // 5. Volume-gebaseerd momentum (als volume beschikbaar)
+  const vols = candles.map(c => c.v).filter(v => v > 0);
+  if (vols.length >= 20) {
+    const avgVol = vols.slice(-20).reduce((a,b)=>a+b,0)/20;
+    const lastVol = candles[last].v;
+    const priceUp = price > closes[last-1];
+    if (lastVol > avgVol * 1.5) {
+      signals.push({
+        type: priceUp ? 'buy' : 'sell',
+        icon: '📢',
+        label: `Hoog Volume ${priceUp?'Stijging':'Daling'}`,
+        detail: `Volume ${((lastVol/avgVol-1)*100).toFixed(0)}% boven gemiddelde — ${priceUp?'bullish':'bearish'} bevestiging`,
+        strength: 2
+      });
+    }
+  }
+
+  // Sorteer op sterkte (hoog naar laag)
+  return signals.sort((a,b) => b.strength - a.strength);
+}
+
+function renderSignals(signals, color) {
+  if (!signals.length) return `<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:8px 18px;">Geen actieve signalen voor deze periode</div>`;
+  return `<div class="signal-strip">
+    ${signals.map(s => `
+      <div class="sig-badge ${s.type==='buy'?'sig-buy':s.type==='sell'?'sig-sell':'sig-neutral'}"
+        title="${s.detail}" onclick="alert('${s.label}\\n\\n${s.detail}\\n\\n⚠️ Dit is een technisch signaal, geen beleggingsadvies.')">
+        ${s.icon} ${s.label}
+      </div>`).join('')}
+    <div class="sig-badge sig-info" style="cursor:default;" title="Technische signalen zijn geen beleggingsadvies">⚠️ Geen advies</div>
+  </div>`;
+}
+
 // ─── CALCULATIONS ─────────────────────────────────────────────────────────────
 function calcPnL(t){
+  if (!pinUnlocked) return null; // Verberg positie-info achter PIN
   const s=STOCKS[t],p=positions[t];
   if(!p||p.qty<=0) return null;
   const cur=p.qty*s.price,cost=p.qty*p.avgCost,pnl=cur-cost,pct=cost>0?(pnl/cost*100):0;
@@ -1010,10 +1450,18 @@ function sparkSVG(pts,color,w=280,h=40,anns=[]){
 
 // ─── SUMMARY ──────────────────────────────────────────────────────────────────
 function renderSummary(){
-  const tot=calcTotal();
   const te=document.getElementById('ph-total');
   const be=document.getElementById('ph-pnl');
   const pe=document.getElementById('ph-pct');
+  if (!pinUnlocked) {
+    te.textContent='🔒 Vergrendeld';te.style.color='var(--muted)';
+    be.className='ph-pnl ne';be.textContent='Tik om pincode in te voeren';pe.textContent='';
+    be.style.cursor='pointer';
+    be.onclick=()=>{ document.getElementById('pin-overlay').style.display='flex'; };
+    return;
+  }
+  be.onclick=null; be.style.cursor='';
+  const tot=calcTotal();
   if(!tot){te.textContent='—';te.style.color='var(--muted)';be.className='ph-pnl ne';be.textContent='⚙️ Voer posities in';pe.textContent='';}
   else{
     const up=tot.pnl>=0;
@@ -1126,86 +1574,851 @@ function buildTabs(){
   }).join('');
 }
 
-// ─── CHART PERIOD LABELS ──────────────────────────────────────────────────────
-const PERIOD_LABELS={
-  '1J':['Mei\'25','Aug\'25','Nov\'25','Feb\'26','Mei\'26'],
-  '6M':['Nov\'25','Dec\'25','Jan\'26','Feb\'26','Mrt\'26','Mei\'26'],
-  '3M':['Feb\'26','Mrt\'26','Apr\'26','Mei\'26'],
-  'YTD':['Jan\'26','Feb\'26','Mrt\'26','Apr\'26','Mei\'26']
+// ─── INTERACTIVE CHART ENGINE ─────────────────────────────────────────────────
+const CHART_PERIODS = {
+  '15M': { range:'1d',  interval:'15m' },
+  '1U':  { range:'5d',  interval:'15m' },
+  '1M':  { range:'1mo', interval:'1h'  },
+  '3M':  { range:'3mo', interval:'1d'  },
+  '6M':  { range:'6mo', interval:'1d'  },
+  '1J':  { range:'1y',  interval:'1d'  },
+  '2J':  { range:'2y',  interval:'1wk' },
+  '5J':  { range:'5y',  interval:'1mo' },
+  'MAX': { range:'max', interval:'1mo' },
 };
 
-function renderChart(ticker, period){
-  const s=STOCKS[ticker];
-  const pts=s.priceH[period];
-  const anns=(s.annH||{})[period]||[];
-  const W=800,H=110,pad=8;
-  const mn=Math.min(...pts),mx=Math.max(...pts);
-  const sx=i=>(i/(pts.length-1))*(W-2*pad)+pad;
-  const sy=v=>H-pad-((v-mn)/(mx-mn||1))*(H-2*pad);
-  const pathD=pts.map((v,i)=>`${i===0?'M':'L'}${sx(i)},${sy(v)}`).join(' ');
-  const areaD=pathD+` L${sx(pts.length-1)},${H} L${pad},${H} Z`;
-  const gId='dg'+ticker+period;
-  const annSVG=anns.map(a=>{
-    const ai=Math.min(a.i,pts.length-1);
-    const x=sx(ai),y=sy(pts[ai]),above=y>H/2;
-    const ly2=above?Math.max(pad+14,y-30):Math.min(H-pad,y+30);
-    return `<circle cx="${x}" cy="${y}" r="5" fill="${a.c}" opacity=".9"/>
-      <line x1="${x}" y1="${y+(above?-5:5)}" x2="${x}" y2="${ly2}" stroke="${a.c}" stroke-width="1" stroke-dasharray="3,2" opacity=".7"/>
-      <rect x="${Math.min(Math.max(x-24,2),W-50)}" y="${above?ly2-13:ly2+1}" width="48" height="13" rx="3" fill="#121521" stroke="${a.c}" stroke-width=".8"/>
-      <text x="${Math.min(Math.max(x,26),W-26)}" y="${above?ly2-3:ly2+11}" font-family="JetBrains Mono" font-size="9" fill="${a.c}" text-anchor="middle" font-weight="600">${a.l}</text>`;
-  }).join('');
+// State per ticker
+const chartState = {};
+function getCS(t) {
+  if (!chartState[t]) chartState[t] = {
+    candles: [], period: '1J', type: 'line',
+    indicators: new Set(['vol']),
+    // Instelbare periodes voor elke indicator
+    settings: { ma20:20, ma50:50, ma200:200, ema1:12, ema2:26, rsiPer:14, bbPer:20, bbMult:2 },
+    srLevels: [],
+    newsEvents: [], // [{date, title, url, type}]
+    loading: false,
+  };
+  return chartState[t];
+}
 
-  const periodChg=((pts[pts.length-1]-pts[0])/pts[0]*100);
-  const pLabels=PERIOD_LABELS[period]||[];
-  const labelsHtml=pLabels.map(l=>`<span>${l}</span>`).join('');
+// Yahoo Finance symbolen
+const YF_HISTORY_SYM = {
+  AAPL:'AAPL', GOOGL:'GOOGL', ACKB:'AKA.BR', SOF:'SOF.BR', IFX:'IFX.DE',
+};
 
-  // Stats row
-  const pnl=calcPnL(ticker);
-  const periodValChg=pnl?(pnl.qty*s.price - pnl.qty*s.price/(1+periodChg/100)):null;
-  const chartStatsHtml=`<div class="chart-stat-row">
-    <div class="cs-box"><div class="cs-lbl">Periode Chg</div><div class="cs-val ${cls(periodChg)}">${fmtPct(periodChg)}</div></div>
-    <div class="cs-box"><div class="cs-lbl">${period} Laag</div><div class="cs-val">${s.cur}${Math.min(...pts).toFixed(2)}</div></div>
-    <div class="cs-box"><div class="cs-lbl">${period} Hoog</div><div class="cs-val">${s.cur}${Math.max(...pts).toFixed(2)}</div></div>
-    ${periodValChg!==null?`<div class="cs-box"><div class="cs-lbl">Mijn P&L ${period}</div><div class="cs-val ${cls(periodValChg)}">${periodValChg>=0?'+':''}${fmtN(Math.abs(periodValChg),s.cur,0)}</div></div>`:''}
-  </div>`;
+// Nieuws cache per ticker
+const newsCache = {};
 
-  return {
-    svgHtml:`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="overflow:visible;">
-      <defs><linearGradient id="${gId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${s.color}" stop-opacity=".3"/><stop offset="100%" stop-color="${s.color}" stop-opacity="0"/></linearGradient>
-      <filter id="gl${ticker}"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-      <path d="${areaD}" fill="url(#${gId})"/>
-      <path d="${pathD}" fill="none" stroke="${s.color}" stroke-width="2.5" filter="url(#gl${ticker})"/>
-      ${annSVG}
-    </svg>`,
-    labelsHtml,
-    chartStatsHtml
+async function fetchNewsForTicker(ticker) {
+  const sym  = YF_HISTORY_SYM[ticker] || ticker;
+  const name = encodeURIComponent(STOCKS[ticker]?.name || ticker);
+  try {
+    const r = await fetch(
+      `/.netlify/functions/news?symbol=${encodeURIComponent(sym)}&name=${name}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
+    if (!r.ok) throw new Error(`News API ${r.status}`);
+    const data = await r.json();
+    newsCache[ticker] = data;
+
+    // Patch analyst data if available
+    const s = STOCKS[ticker];
+    if (data.analystTarget && s?.analysts) {
+      if (data.analystTarget.targetHigh) s.analysts.highTarget = Math.round(data.analystTarget.targetHigh);
+      if (data.analystTarget.targetMean) s.analysts.avgTarget  = Math.round(data.analystTarget.targetMean);
+      if (data.analystTarget.targetLow)  s.analysts.lowTarget  = Math.round(data.analystTarget.targetLow);
+    }
+    if (data.recommendations?.length && s?.analysts) {
+      const r0 = data.recommendations[0];
+      if (r0) {
+        const buy  = (r0.strongBuy || 0) + (r0.buy || 0);
+        const hold =  r0.hold || 0;
+        const sell = (r0.strongSell || 0) + (r0.sell || 0);
+        if (buy + hold + sell > 0) {
+          s.analysts.buy   = buy;
+          s.analysts.hold  = hold;
+          s.analysts.sell  = sell;
+          s.analysts.total = buy + hold + sell;
+        }
+      }
+    }
+    return data;
+  } catch(e) {
+    console.warn(`News fetch failed for ${ticker}:`, e.message);
+    return null;
+  }
+}
+
+async function fetchHistory(ticker, period) {
+  const { range, interval } = CHART_PERIODS[period] || CHART_PERIODS['1J'];
+  const sym = YF_HISTORY_SYM[ticker] || ticker;
+  const url = `/.netlify/functions/history?symbol=${encodeURIComponent(sym)}&period=${range}&interval=${interval}`;
+  const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error(`History ${r.status}`);
+  const data = await r.json();
+  if (data.error) throw new Error(data.error);
+  return data.candles || [];
+}
+
+// ─── TECHNISCHE INDICATOREN ────────────────────────────────────────────────────
+function calcSMA(closes, period) {
+  return closes.map((_, i) => {
+    if (i < period - 1) return null;
+    const slice = closes.slice(i - period + 1, i + 1);
+    return slice.reduce((a, b) => a + b, 0) / period;
+  });
+}
+
+function calcEMA(closes, period) {
+  const k = 2 / (period + 1);
+  const ema = new Array(closes.length).fill(null);
+  // Seed with SMA of first `period` values
+  if (closes.length < period) return ema;
+  let sum = 0;
+  for (let i = 0; i < period; i++) sum += closes[i];
+  ema[period - 1] = sum / period;
+  for (let i = period; i < closes.length; i++) {
+    ema[i] = closes[i] * k + ema[i - 1] * (1 - k);
+  }
+  return ema;
+}
+
+function calcBollinger(closes, period=20, mult=2) {
+  const sma = calcSMA(closes, period);
+  return closes.map((_, i) => {
+    if (i < period - 1) return null;
+    const slice = closes.slice(i - period + 1, i + 1);
+    const mean = sma[i];
+    const std = Math.sqrt(slice.reduce((a, b) => a + (b - mean) ** 2, 0) / period);
+    return { mid: mean, upper: mean + mult * std, lower: mean - mult * std };
+  });
+}
+
+function calcRSI(closes, period=14) {
+  const rsi = new Array(closes.length).fill(null);
+  if (closes.length < period + 1) return rsi;
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const diff = closes[i] - closes[i-1];
+    if (diff > 0) gains += diff; else losses -= diff;
+  }
+  let avgG = gains / period, avgL = losses / period;
+  rsi[period] = 100 - 100 / (1 + (avgL === 0 ? Infinity : avgG / avgL));
+  for (let i = period + 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i-1];
+    avgG = (avgG * (period - 1) + (diff > 0 ? diff : 0)) / period;
+    avgL = (avgL * (period - 1) + (diff < 0 ? -diff : 0)) / period;
+    rsi[i] = 100 - 100 / (1 + (avgL === 0 ? Infinity : avgG / avgL));
+  }
+  return rsi;
+}
+
+// Auto-detect Support & Resistance
+function calcSR(candles, lookback=5) {
+  const levels = [];
+  const highs = candles.map(c => c.h);
+  const lows  = candles.map(c => c.l);
+  for (let i = lookback; i < candles.length - lookback; i++) {
+    const hSlice = highs.slice(i - lookback, i + lookback + 1);
+    const lSlice = lows.slice(i - lookback, i + lookback + 1);
+    if (highs[i] === Math.max(...hSlice)) levels.push({ price: highs[i], type: 'resistance' });
+    if (lows[i]  === Math.min(...lSlice)) levels.push({ price: lows[i],  type: 'support' });
+  }
+  // Cluster nearby levels (within 0.5%)
+  const clustered = [];
+  levels.sort((a, b) => a.price - b.price);
+  levels.forEach(lvl => {
+    const existing = clustered.find(c => Math.abs(c.price - lvl.price) / lvl.price < 0.005);
+    if (existing) { existing.count = (existing.count || 1) + 1; }
+    else clustered.push({ ...lvl, count: 1 });
+  });
+  return clustered.filter(c => c.count >= 2).sort((a,b) => b.count - a.count).slice(0, 8);
+}
+
+// ─── CANVAS CHART RENDERER ─────────────────────────────────────────────────────
+let activeCanvasChart = null;
+
+function drawChart(ticker) {
+  const cs    = getCS(ticker);
+  const s     = STOCKS[ticker];
+  const wrap  = document.getElementById('ichart-canvas-wrap');
+  const cvs   = document.getElementById('ichart-main');
+  const tip   = document.getElementById('ichart-tip');
+  if (!wrap || !cvs || !cs.candles.length) return;
+
+  const DPR   = window.devicePixelRatio || 1;
+  const W     = wrap.clientWidth;
+  const showVol = cs.indicators.has('vol');
+  const showRSI = cs.indicators.has('rsi');
+  const chartH  = 220;
+  const volH    = showVol ? 50  : 0;
+  const rsiH    = showRSI ? 60  : 0;
+  const totalH  = chartH + volH + rsiH;
+
+  cvs.width  = W * DPR;
+  cvs.height = totalH * DPR;
+  cvs.style.height = totalH + 'px';
+  const ctx   = cvs.getContext('2d');
+  ctx.scale(DPR, DPR);
+
+  const candles = cs.candles;
+  const closes  = candles.map(c => c.c);
+  const color   = s.color || '#4285f4';
+
+  // Padding
+  const padL = 8, padR = 52, padT = 12, padB = 20;
+  const cW   = W - padL - padR;
+  const cH   = chartH - padT - padB;
+
+  // Price range
+  const allH = candles.map(c => c.h), allL = candles.map(c => c.l);
+  const pMin = Math.min(...allL) * 0.998;
+  const pMax = Math.max(...allH) * 1.002;
+  const pRange = pMax - pMin || 1;
+
+  const xOf = i => padL + (i / (candles.length - 1 || 1)) * cW;
+  const yOf = v => padT + cH - ((v - pMin) / pRange) * cH;
+
+  // ── Background
+  ctx.fillStyle = '#0e1018';
+  ctx.fillRect(0, 0, W, totalH);
+
+  // ── Grid lines (price)
+  ctx.strokeStyle = '#1e2436';
+  ctx.lineWidth = 1;
+  const gridSteps = 4;
+  for (let i = 0; i <= gridSteps; i++) {
+    const y = padT + (cH / gridSteps) * i;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    const priceVal = pMax - (pMax - pMin) * (i / gridSteps);
+    ctx.fillStyle = '#404d6a';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(priceVal.toFixed(2), W - 2, y + 4);
+  }
+
+  // ── Indicators: MA / EMA lines
+  const showMA20  = cs.indicators.has('ma20');
+  const showMA50  = cs.indicators.has('ma50');
+  const showMA200 = cs.indicators.has('ma200');
+  const showEMA1  = cs.indicators.has('ema1');
+  const showEMA2  = cs.indicators.has('ema2');
+  const showBB    = cs.indicators.has('bb');
+  const cfg       = cs.settings;
+
+  function drawLine(values, col, lw=1.5) {
+    ctx.strokeStyle = col; ctx.lineWidth = lw;
+    ctx.beginPath(); let started = false;
+    values.forEach((v, i) => {
+      if (v == null) return;
+      if (!started) { ctx.moveTo(xOf(i), yOf(v)); started = true; }
+      else ctx.lineTo(xOf(i), yOf(v));
+    });
+    ctx.stroke();
+  }
+
+  // Bollinger Bands
+  if (showBB) {
+    const bb = calcBollinger(closes, cfg.bbPer, cfg.bbMult);
+    const uppers = bb.map(b => b?.upper ?? null);
+    const lowers = bb.map(b => b?.lower ?? null);
+    const mids   = bb.map(b => b?.mid   ?? null);
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#ec4899';
+    ctx.beginPath();
+    uppers.forEach((v,i) => { if(v!=null) i===0||uppers[i-1]==null ? ctx.moveTo(xOf(i),yOf(v)) : ctx.lineTo(xOf(i),yOf(v)); });
+    lowers.slice().reverse().forEach((v,i) => { const ri = lowers.length-1-i; if(v!=null) ctx.lineTo(xOf(ri),yOf(v)); });
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+    drawLine(uppers, '#ec4899', 1);
+    drawLine(lowers, '#ec4899', 1);
+    drawLine(mids,   '#ec4899', 1);
+  }
+
+  if (showMA20)  drawLine(calcSMA(closes, cfg.ma20),  '#f59e0b', 1.5);
+  if (showMA50)  drawLine(calcSMA(closes, cfg.ma50),  '#3b82f6', 1.5);
+  if (showMA200) drawLine(calcSMA(closes, cfg.ma200), '#a855f7', 1.5);
+  if (showEMA1)  drawLine(calcEMA(closes, cfg.ema1),  '#f97316', 1.5); // oranje
+  if (showEMA2)  drawLine(calcEMA(closes, cfg.ema2),  '#06b6d4', 1.5); // cyan
+
+  // ── S/R Levels
+  cs.srLevels.forEach(lvl => {
+    const y = yOf(lvl.price);
+    if (y < padT || y > padT + cH) return;
+    ctx.strokeStyle = lvl.type === 'support' ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = lvl.type === 'support' ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)';
+    ctx.font = '9px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(lvl.price.toFixed(2), W - 2, y - 2);
+  });
+
+  // ── Nieuws Event Markers op de grafiek
+  const newsEvts = cs.newsEvents || [];
+  newsEvts.forEach(evt => {
+    // Zoek de dichtstbijzijnde candle voor de datum
+    const evtMs = evt.ts * 1000;
+    let bestIdx = 0, bestDiff = Infinity;
+    candles.forEach((c, i) => {
+      const diff = Math.abs(c.t - evtMs);
+      if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+    });
+    if (bestDiff > 7 * 24 * 3600 * 1000) return; // Max 7 dagen verschil
+
+    const x = xOf(bestIdx);
+    const y = yOf(candles[bestIdx].h) - 8;
+
+    // Driehoekje marker
+    const evtCol = evt.type === 'earnings' ? '#22c55e' : evt.type === 'analyst' ? '#f59e0b' : '#4285f4';
+    ctx.fillStyle = evtCol;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 8);
+    ctx.lineTo(x - 5, y);
+    ctx.lineTo(x + 5, y);
+    ctx.closePath();
+    ctx.fill();
+
+    // Sla x/y op voor klik-detectie
+    evt._x = x; evt._y = y + 4;
+  });
+
+  // ── Price chart (candlestick or line)
+  if (cs.type === 'candle' && candles.length < 300) {
+    const cw = Math.max(1, cW / candles.length - 1);
+    candles.forEach((c, i) => {
+      const x = xOf(i), ox = c.o, cx_ = c.c, hi = c.h, lo = c.l;
+      const up = cx_ >= ox;
+      const col_ = up ? '#22c55e' : '#ef4444';
+      // Wick
+      ctx.strokeStyle = col_; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, yOf(hi)); ctx.lineTo(x, yOf(lo)); ctx.stroke();
+      // Body
+      ctx.fillStyle = up ? 'rgba(34,197,94,0.85)' : 'rgba(239,68,68,0.85)';
+      const bodyY = yOf(Math.max(ox, cx_));
+      const bodyH = Math.max(1, Math.abs(yOf(ox) - yOf(cx_)));
+      ctx.fillRect(x - cw/2, bodyY, cw, bodyH);
+    });
+  } else {
+    // Line chart with area fill
+    const grad = ctx.createLinearGradient(0, padT, 0, padT + cH);
+    grad.addColorStop(0, color + '40');
+    grad.addColorStop(1, color + '00');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(xOf(0), yOf(closes[0]));
+    closes.forEach((v, i) => ctx.lineTo(xOf(i), yOf(v)));
+    ctx.lineTo(xOf(closes.length-1), padT + cH);
+    ctx.lineTo(xOf(0), padT + cH);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.shadowColor = color; ctx.shadowBlur = 6;
+    ctx.beginPath();
+    closes.forEach((v, i) => i===0 ? ctx.moveTo(xOf(i),yOf(v)) : ctx.lineTo(xOf(i),yOf(v)));
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // ── Volume bars
+  let volY0 = chartH;
+  if (showVol) {
+    volY0 = chartH;
+    const volMax = Math.max(...candles.map(c => c.v || 0));
+    const vH = volH - 4;
+    const cw  = Math.max(1, cW / candles.length - 1);
+    candles.forEach((c, i) => {
+      const h = volMax > 0 ? ((c.v || 0) / volMax) * vH : 0;
+      ctx.fillStyle = c.c >= c.o ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)';
+      ctx.fillRect(xOf(i) - cw/2, volY0 + vH - h + 2, cw, h);
+    });
+    ctx.fillStyle = '#404d6a'; ctx.font = '9px JetBrains Mono,monospace'; ctx.textAlign = 'left';
+    ctx.fillText('VOL', padL + 2, volY0 + 12);
+  }
+
+  // ── RSI panel
+  if (showRSI) {
+    const rsiTop = chartH + volH;
+    const rsiH2  = rsiH - 4;
+    const rsiVals = calcRSI(closes);
+    ctx.strokeStyle = '#1e2436'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, rsiTop); ctx.lineTo(W - padR, rsiTop); ctx.stroke();
+    // Overbought/Oversold lines
+    [30, 70].forEach(lv => {
+      const y = rsiTop + rsiH2 - (lv / 100) * rsiH2 + 2;
+      ctx.strokeStyle = lv === 70 ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)';
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#404d6a'; ctx.font = '9px JetBrains Mono,monospace'; ctx.textAlign = 'right';
+      ctx.fillText(lv, W - 2, y + 3);
+    });
+    // RSI line
+    ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); let rsiStart = false;
+    rsiVals.forEach((v, i) => {
+      if (v == null) return;
+      const x = xOf(i);
+      const y = rsiTop + rsiH2 - (v / 100) * rsiH2 + 2;
+      rsiStart ? ctx.lineTo(x, y) : (ctx.moveTo(x, y), rsiStart = true);
+    });
+    ctx.stroke();
+    ctx.fillStyle = '#404d6a'; ctx.font = '9px JetBrains Mono,monospace'; ctx.textAlign = 'left';
+    ctx.fillText('RSI(14)', padL + 2, rsiTop + 12);
+  }
+
+  // ── X-axis dates
+  const nLabels = Math.min(6, candles.length);
+  const step    = Math.floor(candles.length / nLabels);
+  ctx.fillStyle = '#404d6a'; ctx.font = '9px JetBrains Mono,monospace'; ctx.textAlign = 'center';
+  for (let i = 0; i < nLabels; i++) {
+    const idx = Math.min(i * step, candles.length - 1);
+    const d   = new Date(candles[idx].t);
+    const lbl = d.toLocaleDateString('nl-BE', { day:'2-digit', month:'short' });
+    ctx.fillText(lbl, xOf(idx), totalH - 4);
+  }
+
+  // ── Crosshair interaction
+  if (activeCanvasChart?.ticker === ticker) activeCanvasChart.cleanup?.();
+
+  const onMove = (e) => {
+    const rect  = cvs.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const mx    = clientX - rect.left;
+    const my    = clientY - rect.top;
+    if (mx < padL || mx > W - padR || my < 0 || my > totalH) { tip.classList.remove('show'); return; }
+
+    const idx = Math.round(((mx - padL) / cW) * (candles.length - 1));
+    if (idx < 0 || idx >= candles.length) return;
+    const c   = candles[idx];
+    const x   = xOf(idx);
+
+    // Redraw with crosshair
+    drawChart(ticker);
+    const ctx2 = cvs.getContext('2d');
+    ctx2.scale(DPR, DPR);
+    ctx2.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx2.lineWidth   = 1;
+    ctx2.setLineDash([4, 4]);
+    ctx2.beginPath(); ctx2.moveTo(x, padT); ctx2.lineTo(x, chartH + volH + rsiH - padB); ctx2.stroke();
+    ctx2.beginPath(); ctx2.moveTo(padL, my); ctx2.lineTo(W - padR, my); ctx2.stroke();
+    ctx2.setLineDash([]);
+
+    // Price marker on Y axis
+    const pAtCursor = pMin + ((padT + cH - Math.min(Math.max(my, padT), padT + cH)) / cH) * pRange;
+    ctx2.fillStyle = '#252d40';
+    ctx2.fillRect(W - padR + 1, my - 8, padR - 2, 16);
+    ctx2.fillStyle = '#e8ecf8';
+    ctx2.font = '10px JetBrains Mono,monospace';
+    ctx2.textAlign = 'left';
+    ctx2.fillText(pAtCursor.toFixed(2), W - padR + 3, my + 4);
+
+    // Dot on line
+    const dotY = yOf(c.c);
+    ctx2.fillStyle = color;
+    ctx2.beginPath(); ctx2.arc(x, dotY, 4, 0, Math.PI*2); ctx2.fill();
+
+    // Tooltip
+    const up = c.c >= c.o;
+    const d  = new Date(c.t);
+    const dl = d.toLocaleDateString('nl-BE', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+    const chgPct = c.o > 0 ? ((c.c - c.o) / c.o * 100).toFixed(2) : 0;
+    const rsiNow  = cs.indicators.has('rsi') ? calcRSI(closes, cfg.rsiPer)[idx] : null;
+    const ma20Now = cs.indicators.has('ma20') ? calcSMA(closes, cfg.ma20)[idx] : null;
+    const ma50Now = cs.indicators.has('ma50') ? calcSMA(closes, cfg.ma50)[idx] : null;
+    const ema1Now = cs.indicators.has('ema1') ? calcEMA(closes, cfg.ema1)[idx] : null;
+    const ema2Now = cs.indicators.has('ema2') ? calcEMA(closes, cfg.ema2)[idx] : null;
+
+    tip.innerHTML = `
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px;">${dl}</div>
+      <div class="ict-row"><span class="ict-lbl">Sluit</span><span class="ict-val ${up?'up':'dn'}">${s.cur}${c.c?.toFixed(2)}</span></div>
+      ${cs.type==='candle'?`
+      <div class="ict-row"><span class="ict-lbl">Open</span><span class="ict-val">${s.cur}${c.o?.toFixed(2)}</span></div>
+      <div class="ict-row"><span class="ict-lbl">Hoog</span><span class="ict-val">${s.cur}${c.h?.toFixed(2)}</span></div>
+      <div class="ict-row"><span class="ict-lbl">Laag</span><span class="ict-val">${s.cur}${c.l?.toFixed(2)}</span></div>`:''}
+      <div class="ict-row"><span class="ict-lbl">Δ Dag</span><span class="ict-val ${up?'up':'dn'}">${up?'+':''}${chgPct}%</span></div>
+      ${c.v?`<div class="ict-row"><span class="ict-lbl">Volume</span><span class="ict-val">${(c.v/1e6).toFixed(2)}M</span></div>`:''}
+      ${rsiNow!=null?`<div class="ict-row"><span class="ict-lbl">RSI(${cfg.rsiPer})</span><span class="ict-val ${rsiNow>70?'dn':rsiNow<30?'up':''}">${rsiNow.toFixed(1)}</span></div>`:''}
+      ${ma20Now!=null?`<div class="ict-row"><span class="ict-lbl">SMA${cfg.ma20}</span><span class="ict-val" style="color:#f59e0b;">${s.cur}${ma20Now.toFixed(2)}</span></div>`:''}
+      ${ma50Now!=null?`<div class="ict-row"><span class="ict-lbl">SMA${cfg.ma50}</span><span class="ict-val" style="color:#3b82f6;">${s.cur}${ma50Now.toFixed(2)}</span></div>`:''}
+      ${ema1Now!=null?`<div class="ict-row"><span class="ict-lbl">EMA${cfg.ema1}</span><span class="ict-val" style="color:#f97316;">${s.cur}${ema1Now.toFixed(2)}</span></div>`:''}
+      ${ema2Now!=null?`<div class="ict-row"><span class="ict-lbl">EMA${cfg.ema2}</span><span class="ict-val" style="color:#06b6d4;">${s.cur}${ema2Now.toFixed(2)}</span></div>`:''}
+    `;
+    tip.classList.add('show');
+    // Position tooltip
+    const tipW = 160, margin = 8;
+    const tx = mx + margin + tipW > W ? mx - tipW - margin : mx + margin;
+    const ty = Math.min(Math.max(my - 20, 0), totalH - 120);
+    tip.style.left = tx + 'px';
+    tip.style.top  = ty + 'px';
+  };
+
+  const onLeave = () => { tip.classList.remove('show'); drawChart(ticker); };
+
+  // Klik op nieuws event markers
+  const onClick = (e) => {
+    const rect = cvs.getBoundingClientRect();
+    const mx = (e.clientX - rect.left);
+    const my = (e.clientY - rect.top);
+    const newsEvts = getCS(ticker).newsEvents || [];
+    for (const evt of newsEvts) {
+      if (evt._x !== undefined && Math.abs(mx - evt._x) < 10 && Math.abs(my - (evt._y || 0)) < 10) {
+        if (evt.url) window.open(evt.url, '_blank', 'noopener');
+        return;
+      }
+    }
+  };
+
+  cvs.addEventListener('mousemove', onMove);
+  cvs.addEventListener('touchmove', onMove, { passive: true });
+  cvs.addEventListener('mouseleave', onLeave);
+  cvs.addEventListener('touchend', onLeave);
+  cvs.addEventListener('click', onClick);
+
+  activeCanvasChart = {
+    ticker,
+    cleanup: () => {
+      cvs.removeEventListener('mousemove', onMove);
+      cvs.removeEventListener('touchmove', onMove);
+      cvs.removeEventListener('mouseleave', onLeave);
+      cvs.removeEventListener('touchend', onLeave);
+      cvs.removeEventListener('click', onClick);
+    }
   };
 }
 
-function setPeriod(period, el){
-  chartPeriod=period;
-  // update active tab styling
-  document.querySelectorAll('.ptab').forEach(e=>e.classList.remove('active'));
+function openChartSettings(ticker) {
+  const cs  = getCS(ticker);
+  const cfg = cs.settings;
+  const existing = document.getElementById('chart-settings-modal');
+  if (existing) { existing.remove(); return; }
+  const modal = document.createElement('div');
+  modal.id = 'chart-settings-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-end;';
+
+  const tplHtml = savedTemplates.map(tpl => `
+    <div style="display:flex;align-items:center;gap:8px;background:var(--s2);border-radius:8px;padding:8px 12px;border:1px solid var(--b1);">
+      <div style="flex:1;">
+        <div style="font-size:12px;font-weight:600;">${tpl.name}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);">${tpl.indicators.join(' · ')}</div>
+      </div>
+      <button onclick="applyTemplate(savedTemplates.find(t=>t.id==='${tpl.id}'),'${ticker}')" style="font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--green);background:var(--gd);color:var(--green);cursor:pointer;">Toepassen</button>
+      ${tpl.custom ? `<button onclick="deleteTemplateAndRefresh('${tpl.id}','${ticker}')" style="font-family:var(--mono);font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid var(--rd);background:var(--rd);color:var(--red);cursor:pointer;">🗑</button>` : ''}
+    </div>`).join('');
+
+  modal.innerHTML = `
+    <div style="width:100%;background:var(--s1);border-top:1px solid var(--b2);border-radius:20px 20px 0 0;padding:20px 20px 40px;max-height:88vh;overflow-y:auto;">
+      <div style="width:36px;height:4px;border-radius:2px;background:var(--b2);margin:0 auto 16px;"></div>
+
+      <!-- SJABLONEN -->
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;">📋 Sjablonen</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Kies een sjabloon of sla je huidige instellingen op</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">${tplHtml}</div>
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <input id="tpl-name-input" type="text" placeholder="Naam voor nieuw sjabloon..."
+          style="flex:1;background:var(--s2);border:1px solid var(--b2);border-radius:8px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:var(--text);outline:none;">
+        <button onclick="saveTemplateFromInput('${ticker}')" style="font-family:var(--mono);font-size:11px;padding:8px 14px;border-radius:8px;border:1px solid var(--blue);background:var(--bd);color:var(--blue);cursor:pointer;white-space:nowrap;">💾 Opslaan</button>
+      </div>
+
+      <div style="height:1px;background:var(--b1);margin-bottom:16px;"></div>
+
+      <!-- INDICATOR PERIODES -->
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">⚙️ Indicator Periodes</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Pas de periodes aan van elke technische indicator</div>
+      ${[
+        { key:'ma20',   lbl:'SMA Kort',           col:'#f59e0b', hint:'Standaard: 20' },
+        { key:'ma50',   lbl:'SMA Middellang',      col:'#3b82f6', hint:'Standaard: 50' },
+        { key:'ma200',  lbl:'SMA Lang',            col:'#a855f7', hint:'Standaard: 200' },
+        { key:'ema1',   lbl:'EMA Snel',            col:'#f97316', hint:'Standaard: 12' },
+        { key:'ema2',   lbl:'EMA Traag',           col:'#06b6d4', hint:'Standaard: 26' },
+        { key:'rsiPer', lbl:'RSI Periode',         col:'#22c55e', hint:'Standaard: 14' },
+        { key:'bbPer',  lbl:'Bollinger Periode',   col:'#ec4899', hint:'Standaard: 20' },
+        { key:'bbMult', lbl:'Bollinger StdDev ×',  col:'#ec4899', hint:'Standaard: 2.0', step:'0.1', min:'0.5', max:'4' },
+      ].map(s => `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;background:var(--s2);border-radius:10px;padding:10px 14px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${s.col};flex-shrink:0;"></div>
+          <div style="flex:1;"><div style="font-size:12px;font-weight:600;">${s.lbl}</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);">${s.hint}</div></div>
+          <input type="number" id="cfg_${s.key}" value="${cfg[s.key]}" min="${s.min||'1'}" max="${s.max||'500'}" step="${s.step||'1'}"
+            style="width:60px;background:var(--s1);border:1px solid var(--b2);border-radius:8px;padding:6px 8px;font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);text-align:center;outline:none;">
+        </div>`).join('')}
+      <button onclick="saveChartSettings('${ticker}')" style="width:100%;padding:14px;background:var(--green);border:none;border-radius:12px;font-family:var(--mono);font-size:13px;font-weight:700;color:#000;cursor:pointer;margin-top:4px;">
+        ✓ Toepassen
+      </button>
+      <button onclick="document.getElementById('chart-settings-modal')?.remove()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--b2);border-radius:12px;font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;margin-top:8px;">
+        Annuleren
+      </button>
+    </div>`;
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function saveTemplateFromInput(ticker) {
+  const inp = document.getElementById('tpl-name-input');
+  const name = inp?.value?.trim();
+  if (!name) { showDbStatus('Geef een naam in voor het sjabloon', 'orange'); return; }
+  await saveTemplate(name, ticker);
+  inp.value = '';
+  // Heropen modal met nieuwe template
+  document.getElementById('chart-settings-modal')?.remove();
+  openChartSettings(ticker);
+}
+
+async function deleteTemplateAndRefresh(id, ticker) {
+  await deleteTemplate(id);
+  document.getElementById('chart-settings-modal')?.remove();
+  openChartSettings(ticker);
+}
+
+function saveChartSettings(ticker, skipModal=false) {
+  const cs  = getCS(ticker);
+  const keys = ['ma20','ma50','ma200','ema1','ema2','rsiPer','bbPer','bbMult'];
+  keys.forEach(k => {
+    const el = document.getElementById('cfg_' + k);
+    if (el) cs.settings[k] = parseFloat(el.value) || cs.settings[k];
+  });
+  if (!skipModal) document.getElementById('chart-settings-modal')?.remove();
+  drawChart(ticker);
+  refreshIndicatorButtons(ticker);
+}
+
+function refreshIndicatorButtons(ticker) {
+  const cs  = getCS(ticker);
+  const cfg = cs.settings;
+  const wrap = document.querySelector('.ichart-indicators');
+  if (!wrap) return;
+  const inds = [
+    { id:'ma20',  lbl:`SMA${cfg.ma20}`,  col:'#f59e0b' },
+    { id:'ma50',  lbl:`SMA${cfg.ma50}`,  col:'#3b82f6' },
+    { id:'ma200', lbl:`SMA${cfg.ma200}`, col:'#a855f7' },
+    { id:'ema1',  lbl:`EMA${cfg.ema1}`,  col:'#f97316' },
+    { id:'ema2',  lbl:`EMA${cfg.ema2}`,  col:'#06b6d4' },
+    { id:'bb',    lbl:'BB',              col:'#ec4899' },
+    { id:'rsi',   lbl:'RSI',             col:'#22c55e' },
+    { id:'vol',   lbl:'VOL',             col:'#64748b' },
+  ];
+  wrap.innerHTML = inds.map(ind =>
+    `<div class="ict-ind ${ind.id} ${cs.indicators.has(ind.id)?'active':''}" data-ind="${ind.id}"
+      onclick="toggleIndicator('${ind.id}')"
+      style="border-color:${cs.indicators.has(ind.id)?ind.col:'var(--b1)'};color:${cs.indicators.has(ind.id)?ind.col:'var(--muted)'}">${ind.lbl}</div>`
+  ).join('');
+}
+
+async function loadAndDrawChart(ticker, period) {
+  const cs = getCS(ticker);
+  cs.period  = period;
+  cs.loading = true;
+
+  const wrap = document.getElementById('ichart-canvas-wrap');
+  if (!wrap) return;
+
+  wrap.innerHTML = `<div class="ichart-loading">⏳ Koersdata + Nieuws laden...</div>`;
+
+  try {
+    // Haal candles en nieuws parallel op
+    const [candles, newsData] = await Promise.all([
+      fetchHistory(ticker, period),
+      newsCache[ticker] ? Promise.resolve(newsCache[ticker]) : fetchNewsForTicker(ticker),
+    ]);
+
+    cs.candles  = candles;
+    cs.srLevels = calcSR(cs.candles);
+
+    // Verwerk nieuws als grafiek-events
+    if (newsData?.news) {
+      cs.newsEvents = newsData.news
+        .filter(n => n.publishedAt && n.url)
+        .map(n => {
+          const t = (n.title || '').toLowerCase();
+          const type = t.includes('earn')||t.includes('quarter')||t.includes('result') ? 'earnings'
+                     : t.includes('analyst')||t.includes('target')||t.includes('rating') ? 'analyst'
+                     : 'news';
+          return { ts: n.publishedAt, title: n.title, url: n.url, source: n.source, type };
+        });
+      updateNewsSection(ticker, newsData);
+    }
+    cs.loading = false;
+
+    wrap.innerHTML = `
+      <canvas id="ichart-main" class="ichart" style="display:block;width:100%;"></canvas>
+      <div class="ichart-tooltip" id="ichart-tip"></div>
+    `;
+
+    const srList = document.getElementById('ichart-sr-list');
+    if (srList) {
+      srList.innerHTML = cs.srLevels.slice(0,6).map(lvl =>
+        `<span class="ichart-sr-tag ${lvl.type}" title="${lvl.count}x bevestigd">${STOCKS[ticker]?.cur||''}${lvl.price.toFixed(2)}</span>`
+      ).join('') || '<span style="font-family:var(--mono);font-size:10px;color:var(--muted);">Geen S/R gevonden</span>';
+    }
+
+    drawChart(ticker);
+
+    // Technische signalen berekenen en tonen
+    const signals = calcSignals(cs.candles, cs.settings);
+    const sigWrap = document.getElementById('ichart-signals');
+    if (sigWrap) sigWrap.innerHTML = renderSignals(signals, STOCKS[ticker]?.color);
+
+    const statsWrap = document.getElementById('ichart-stats');
+    if (statsWrap && cs.candles.length > 1) {
+      const first = cs.candles[0].c, last = cs.candles[cs.candles.length-1].c;
+      const chg = ((last - first) / first * 100);
+      const hi = Math.max(...cs.candles.map(c=>c.h)), lo = Math.min(...cs.candles.map(c=>c.l));
+      const pnl = calcPnL(ticker);
+      const s   = STOCKS[ticker];
+      statsWrap.innerHTML = `
+        <div class="cs-box"><div class="cs-lbl">Periode Chg</div><div class="cs-val ${chg>=0?'g':'r'}">${chg>=0?'+':''}${chg.toFixed(2)}%</div></div>
+        <div class="cs-box"><div class="cs-lbl">Laag</div><div class="cs-val">${s?.cur||''}${lo.toFixed(2)}</div></div>
+        <div class="cs-box"><div class="cs-lbl">Hoog</div><div class="cs-val">${s?.cur||''}${hi.toFixed(2)}</div></div>
+        ${pnl?`<div class="cs-box"><div class="cs-lbl">Mijn P&L</div><div class="cs-val ${pnl.pnl>=0?'g':'r'}">${pnl.pnl>=0?'+':''}${fmtN(Math.abs(pnl.pnl),s?.cur||'€',0)}</div></div>`:''}
+      `;
+    }
+  } catch(e) {
+    cs.loading = false;
+    wrap.innerHTML = `<div class="ichart-loading" style="color:var(--red);">⚠️ ${e.message}</div>`;
+  }
+}
+
+function updateNewsSection(ticker, newsData) {
+  const newsWrap = document.getElementById(`news-section-${ticker}`);
+  if (!newsWrap) return;
+
+  const s = STOCKS[ticker];
+
+  // Upgrades/downgrades sectie (nieuw — boven het nieuws)
+  const upgrades = newsData?.upgrades || [];
+  const upgradesHtml = upgrades.length ? `
+    <div class="analyst-title" style="margin-bottom:8px;">↑↓ RECENTE UPGRADES & DOWNGRADES · LIVE</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+      ${upgrades.map(u => {
+        const cls = u.sentiment === 'positive' ? 'ud-dir-up' : u.sentiment === 'negative' ? 'ud-dir-dn' : 'ud-dir-ne';
+        const fromTo = u.fromGrade && u.toGrade ? `${u.fromGrade} → ${u.toGrade}` : u.toGrade || u.fromGrade || '';
+        return `<div class="ud-item">
+          <div class="${cls}">${u.actionNl}</div>
+          <div class="ud-body">
+            <div class="ud-firm">${u.firm}</div>
+            <div class="ud-grades">${fromTo} · ${u.gradeDate}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  // Nieuws sectie
+  if (!newsData?.news?.length) {
+    newsWrap.innerHTML = `<div class="news-title">NIEUWS & EVENTS · ${ticker}</div>${upgradesHtml}<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:10px 0;">Geen nieuws beschikbaar</div>`;
+    return;
+  }
+
+  const newsHtml = newsData.news.slice(0, 12).map(n => {
+    const d  = new Date(n.publishedAt * 1000);
+    const dl = d.toLocaleDateString('nl-BE', { day:'2-digit', month:'short', year:'numeric' });
+    const tl = (n.title || '').toLowerCase();
+    const badge = tl.includes('earn')||tl.includes('quarter') ? 'nb-earn'
+                : tl.includes('analyst')||tl.includes('target') ? 'nb-ana'
+                : tl.includes('risk')||tl.includes('warning')   ? 'nb-risk'
+                : 'nb-cat';
+    const bl = badge === 'nb-earn' ? 'EARNINGS' : badge === 'nb-ana' ? 'ANALIST' : badge === 'nb-risk' ? 'RISICO' : 'NIEUWS';
+    return `<div class="news-item">
+      <div class="ni-meta">
+        <span class="ni-badge ${badge}">${bl}</span>
+        <span class="ni-date">${dl}</span>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--muted2);">${n.source || ''}</span>
+        ${n.url ? `<a href="${n.url}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:9px;color:var(--blue);padding:1px 6px;border:1px solid rgba(66,133,244,.3);border-radius:3px;text-decoration:none;margin-left:auto;">🔗 Lees meer</a>` : ''}
+      </div>
+      <div class="ni-title">${n.title || ''}</div>
+      <div class="ni-body">${n.summary || ''}</div>
+    </div>`;
+  }).join('');
+
+  newsWrap.innerHTML = `
+    <div class="news-title">NIEUWS & EVENTS · ${ticker}
+      <span style="color:var(--muted2);font-size:9px;margin-left:6px;">Finnhub + Yahoo Finance · elke 5 min</span>
+    </div>
+    ${upgradesHtml}
+    ${newsHtml}
+  `;
+}
+
+function toggleIndicator(ind) {
+  const cs = getCS(activeStock);
+  if (cs.indicators.has(ind)) cs.indicators.delete(ind);
+  else cs.indicators.add(ind);
+  // Update button style
+  document.querySelectorAll(`.ict-ind`).forEach(btn => {
+    if (btn.dataset.ind === ind) btn.classList.toggle('active', cs.indicators.has(ind));
+  });
+  drawChart(activeStock);
+}
+
+function setChartType(type, el) {
+  getCS(activeStock).type = type;
+  document.querySelectorAll('.ict-type').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  // re-render just the chart + labels + stats inside the existing card
-  const s=STOCKS[activeStock];
-  const {svgHtml,labelsHtml,chartStatsHtml}=renderChart(activeStock,period);
-  const svgWrap=document.getElementById('chart-svg-wrap');
-  const xlWrap=document.getElementById('chart-xl-wrap');
-  const statsWrap=document.getElementById('chart-stats-wrap');
-  if(svgWrap) svgWrap.innerHTML=svgHtml;
-  if(xlWrap) xlWrap.innerHTML=labelsHtml;
-  if(statsWrap) statsWrap.innerHTML=chartStatsHtml;
+  drawChart(activeStock);
+}
+
+function setChartPeriod(period, el) {
+  document.querySelectorAll('.ict-period').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  loadAndDrawChart(activeStock, period);
+}
+
+// Keep old setPeriod for compatibility
+function setPeriod(period, el) { setChartPeriod(period, el); }
+
+function buildChartHTML(ticker) {
+  const s  = STOCKS[ticker];
+  const cs = getCS(ticker);
+  const periods = ['15M','1U','1M','3M','6M','1J','2J','5J','MAX'];
+  const inds = [
+    { id:'ma20',  lbl:`SMA${cs.settings.ma20}`, col:'#f59e0b' },
+    { id:'ma50',  lbl:`SMA${cs.settings.ma50}`, col:'#3b82f6' },
+    { id:'ma200', lbl:`SMA${cs.settings.ma200}`,col:'#a855f7' },
+    { id:'ema1',  lbl:`EMA${cs.settings.ema1}`, col:'#f97316' },
+    { id:'ema2',  lbl:`EMA${cs.settings.ema2}`, col:'#06b6d4' },
+    { id:'bb',    lbl:'BB',    col:'#ec4899' },
+    { id:'rsi',   lbl:`RSI`,   col:'#22c55e' },
+    { id:'vol',   lbl:'VOL',   col:'#64748b' },
+  ];
+
+  return `<div class="ichart-wrap" style="--card-color:${s.color}">
+    <div class="ichart-toolbar">
+      <div class="ichart-periods">
+        ${periods.map(p=>`<div class="ict-period ${p===cs.period?'active':''}" onclick="setChartPeriod('${p}',this)">${p}</div>`).join('')}
+      </div>
+      <div class="ichart-sep"></div>
+      <div class="ict-type ${cs.type==='line'?'active':''}" onclick="setChartType('line',this)">📈 Lijn</div>
+      <div class="ict-type ${cs.type==='candle'?'active':''}" onclick="setChartType('candle',this)">🕯 Candle</div>
+      <div class="ichart-sep"></div>
+      <div class="ict-type" onclick="openChartSettings('${ticker}')" title="Indicatoren instellen">⚙️</div>
+    </div>
+    <div class="ichart-indicators" style="display:flex;gap:4px;padding:0 0 8px;flex-wrap:wrap;">
+      ${inds.map(ind=>`<div class="ict-ind ${ind.id} ${cs.indicators.has(ind.id)?'active':''}" data-ind="${ind.id}" onclick="toggleIndicator('${ind.id}')" style="border-color:${cs.indicators.has(ind.id)?ind.col:'var(--b1)'};color:${cs.indicators.has(ind.id)?ind.col:'var(--muted)'}">${ind.lbl}</div>`).join('')}
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;" id="ichart-stats"></div>
+    <div class="ichart-canvas-wrap" id="ichart-canvas-wrap">
+      <div class="ichart-loading">⏳ Koersdata laden...</div>
+    </div>
+    <div id="ichart-signals"></div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:4px;padding:0 18px 4px;">
+      🟢 Support &nbsp; 🔴 Resistance &nbsp; 🔵 Nieuws &nbsp; 🟡 Analyst &nbsp; 🟠 Earnings
+    </div>
+    <div class="ichart-sr" id="ichart-sr-wrap">
+      <div class="ichart-sr-title">Support & Resistance</div>
+      <div class="ichart-sr-list" id="ichart-sr-list"><span style="font-family:var(--mono);font-size:10px;color:var(--muted);">Laden...</span></div>
+    </div>
+  </div>`;
 }
 
 function renderDetail(t){
   activeStock=t;
   const s=STOCKS[t],pnl=calcPnL(t),up=s.dir==='up';
-  const period=chartPeriod;
-  const {svgHtml,labelsHtml,chartStatsHtml}=renderChart(t,period);
   const an=s.analysts;
-  const buyPct=Math.round(an.buy/an.total*100),holdPct=Math.round(an.hold/an.total*100),sellPct=100-buyPct-holdPct;
+  const tot = an.total || 1;
+  const buyPct=Math.round(an.buy/tot*100),holdPct=Math.round(an.hold/tot*100),sellPct=100-buyPct-holdPct;
   const upside=((an.avgTarget-s.price)/s.price*100);
+
 
   const pnlBlock=pnl?`<div class="pnl-box">
     <div class="pnl-row"><span class="pnl-l">Aantal stuks</span><span class="pnl-v">${fmtQty(pnl.qty)}</span></div>
@@ -1266,15 +2479,7 @@ function renderDetail(t){
       </div>
       ${pnlBlock}
     </div>
-    <div class="dc-chart">
-      <div class="dc-chart-hdr">
-        <div class="dc-chart-lbl">KOERSVERLOOP</div>
-        <div class="period-tabs">${tabsHtml}</div>
-      </div>
-      <div id="chart-stats-wrap">${chartStatsHtml}</div>
-      <div id="chart-svg-wrap">${svgHtml}</div>
-      <div class="chart-xl" id="chart-xl-wrap">${labelsHtml}</div>
-    </div>
+    ${buildChartHTML(t)}
     <div class="dc-ratios">
       <div class="ratios-title">FINANCIËLE RATIO'S & KENGETALLEN</div>
       <div class="ratios-grid">${ratioHtml}</div>
@@ -1301,8 +2506,8 @@ function renderDetail(t){
       <div class="analyst-title" style="margin-bottom:8px;">RECENTE ANALIST UPDATES</div>
       <div class="analyst-updates">${auHtml}</div>
     </div>
-    <div class="dc-news">
-      <div class="news-title">NIEUWS & EVENTS · ${s.ticker}</div>
+    <div class="dc-news" id="news-section-${t}">
+      <div class="news-title">NIEUWS & EVENTS · ${s.ticker} <span style="color:var(--muted2);font-size:9px;">⏳ Laden...</span></div>
       ${newsHtml}
     </div>
   </div>
@@ -1310,9 +2515,13 @@ function renderDetail(t){
     <div class="ev-icon">${s.nextIcon}</div>
     <div><div class="ev-lbl">VOLGEND EVENT</div><div class="ev-title">${s.next}</div></div>
   </div>`;
+
+  // Laad historische koersdata en teken de interactieve grafiek
+  const cs = getCS(t);
+  setTimeout(() => loadAndDrawChart(t, cs.period), 50);
 }
 
-function setStock(t){chartPeriod='1J';buildTabs();renderDetail(t);window.scrollTo(0,0);}
+function setStock(t){buildTabs();renderDetail(t);window.scrollTo(0,0);}
 function goDetail(t){activeStock=t;showPage('detail');}
 
 // ─── DRAWER ───────────────────────────────────────────────────────────────────
@@ -1393,17 +2602,16 @@ async function addTicker(ticker) {
   if (!ticker) return;
   if (STOCKS[ticker]) { showDbStatus(`${ticker} zit al in je portefeuille`, 'orange'); return; }
 
-  showDbStatus(`🔄 ${ticker} opzoeken via Finnhub...`, 'orange');
+  showDbStatus(`🔄 ${ticker} opzoeken...`, 'orange');
   try {
-    const fhSym = FH_SYMBOL[ticker] || ticker;
-    const [q, profile] = await Promise.all([
-      fetchQuote(fhSym),
-      fetchProfile(fhSym)
-    ]);
-    if (!q || q.c === 0) throw new Error('Ticker niet gevonden. Controleer symbool (bv. NVDA, XETRA:IFX, EURONEXT:AKA)');
-    const name = profile?.name    || ticker;
-    const exch = profile?.exchange || '—';
-    const cur  = (profile?.currency || 'USD') === 'EUR' ? '€' : '$';
+    // Gebruik onze eigen Netlify function om Yahoo Finance te bevragen
+    const sym = YF_SYM[ticker] || ticker;
+    const data = await fetchAllQuotes([ticker]);
+    const d = data[sym];
+    if (!d || d.error || !d.price) throw new Error(d?.error || 'Ticker niet gevonden. Probeer bv. NVDA, AKA.BR, IFX.DE');
+    const name = d.name     || ticker;
+    const exch = d.exchange  || '—';
+    const cur  = d.currency === 'EUR' ? '€' : '$';
 
     // Pick a random color from palette
     const colors = ['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff','#5f27cd','#00d2d3','#ff9f43'];
@@ -1417,9 +2625,9 @@ async function addTicker(ticker) {
       color: col,
       logoBg: `linear-gradient(135deg,#1a1a2e,${col})`,
       logoTxt: ticker.slice(0,4),
-      price: q.c ?? 0,
+      price: d.price ?? 0,
       chg: '—', chgNum: 0, dir: 'up',
-      wkH: 0, wkL: 0,
+      wkH: d.wkHigh ?? 0, wkL: d.wkLow ?? 0,
       ratios: { 'Exchange': exch, 'Valuta': cur },
       analysts: { consensus:'—', buy:0, hold:0, sell:0, total:0, avgTarget:0, highTarget:0, lowTarget:0 },
       news: [],
@@ -1429,7 +2637,7 @@ async function addTicker(ticker) {
       next: '—', nextIcon: '📅', nextColor: col
     };
     positions[ticker] = { qty: 0, avgCost: 0 };
-    FH_SYMBOL[ticker] = fhSym; // voeg toe aan symboolmapping
+    YF_SYM[ticker] = sym; // voeg toe aan symboolmapping
 
     // Save to Supabase
     await sbUpsert('portfolio_positions', [{
@@ -1511,28 +2719,753 @@ async function loadTickersFromDB() {
   try {
     const data = await sbGet('portfolio_positions', 'select=ticker,qty,avg_cost&order=ticker');
     if (data && data.length > 0) {
+      // Welke tickers zitten in de DB?
+      const dbTickers = new Set(data.map(row => row.ticker));
+
+      // Verwijder tickers uit STOCKS die NIET meer in de DB zitten
+      // (maar behoud de 5 standaard tickers als ze nooit werden toegevoegd via DB)
+      const defaultTickers = new Set(['AAPL','GOOGL','ACKB','SOF','IFX']);
+      Object.keys(STOCKS).forEach(t => {
+        if (!dbTickers.has(t) && !defaultTickers.has(t)) {
+          // Dynamisch toegevoegde ticker die verwijderd werd uit DB
+          delete STOCKS[t];
+          delete positions[t];
+          delete liveData[t];
+        }
+      });
+
+      // Laad posities en voeg eventuele nieuwe tickers toe
       data.forEach(row => {
         positions[row.ticker] = {
           qty:     parseFloat(row.qty)      || 0,
           avgCost: parseFloat(row.avg_cost) || 0
         };
-        // Add dynamic tickers not in original STOCKS
-        if (!STOCKS[row.ticker] && STOCK_META[row.ticker]) {
-          STOCKS[row.ticker] = { ...STOCK_META[row.ticker], price:0, chg:'—', chgNum:0, dir:'up',
-            wkH:0, wkL:0, ratios:{}, analysts:{consensus:'—',buy:0,hold:0,sell:0,total:0,avgTarget:0,highTarget:0,lowTarget:0},
-            news:[], priceH:{'1J':[],'6M':[],'3M':[],'YTD':[]}, annH:{'1J':[],'6M':[],'3M':[],'YTD':[]},
-            dayChg:0, ytdChg:0, next:'—', nextIcon:'📅', nextColor:'#888' };
-        } else if (!positions[row.ticker]) {
-          positions[row.ticker] = { qty: 0, avgCost: 0 };
+        // Voeg toe aan STOCKS als het een nieuwe ticker is die er nog niet in zit
+        if (!STOCKS[row.ticker]) {
+          STOCKS[row.ticker] = {
+            name: row.ticker, full: row.ticker, ticker: row.ticker,
+            exchange: '—', cur: '$',
+            color: '#888',
+            logoBg: 'linear-gradient(135deg,#1a1a2e,#888)',
+            logoTxt: row.ticker.slice(0,4),
+            price: 0, chg:'—', chgNum:0, dir:'up',
+            wkH:0, wkL:0,
+            ratios:{}, news:[],
+            analysts:{ consensus:'—',buy:0,hold:0,sell:0,total:0,avgTarget:0,highTarget:0,lowTarget:0 },
+            priceH:{'1J':[],'6M':[],'3M':[],'YTD':[]},
+            annH:{'1J':[],'6M':[],'3M':[],'YTD':[]},
+            dayChg:0, ytdChg:0, next:'—', nextIcon:'📅', nextColor:'#888'
+          };
+          // Voeg ook toe aan YF_SYM mapping
+          if (!YF_SYM[row.ticker]) YF_SYM[row.ticker] = row.ticker;
         }
+      });
+
+      // Verwijder ook posities van default tickers die niet in DB zitten
+      // (dit betekent dat ze bewust werden verwijderd)
+      defaultTickers.forEach(t => {
+        if (!dbTickers.has(t) && STOCKS[t]) {
+          delete STOCKS[t];
+          delete positions[t];
+          delete liveData[t];
+        }
+      });
+    } else {
+      // Lege DB — eerste gebruik, initialiseer alle default tickers
+      Object.keys(STOCKS).forEach(t => {
+        if (!positions[t]) positions[t] = { qty: 0, avgCost: 0 };
       });
     }
     dbReady = true;
   } catch(e) {
     console.warn('loadTickersFromDB failed:', e.message);
-    // Restore defaults
     Object.keys(STOCKS).forEach(t => { if(!positions[t]) positions[t]={qty:0,avgCost:0}; });
     showDbStatus('⚠️ Offline — lokale data', 'orange');
+  }
+}
+
+// ─── WATCHLIST SYSTEEM ───────────────────────────────────────────────────────
+// SQL eenmalig uitvoeren in Supabase:
+// CREATE TABLE IF NOT EXISTS watchlist (
+//   ticker TEXT PRIMARY KEY,
+//   yf_sym TEXT,
+//   name TEXT,
+//   color TEXT,
+//   note TEXT,
+//   added_at TIMESTAMPTZ DEFAULT NOW()
+// );
+// ALTER TABLE watchlist ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY "public_all" ON watchlist FOR ALL USING (true) WITH CHECK (true);
+
+let watchlist   = {}; // { ticker: { name, color, yf_sym, note, data:{} } }
+let wlData      = {}; // live data per wl ticker
+let wlNewsCache = {}; // news per wl ticker
+let wlFilter    = 'all';
+
+// Kleuren voor watchlist items
+const WL_COLORS = ['#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#6b7280'];
+
+async function loadWatchlist() {
+  try {
+    const data = await sbGet('watchlist', 'select=ticker,yf_sym,name,color,note&order=added_at');
+    if (data && data.length > 0) {
+      watchlist = {};
+      data.forEach(row => {
+        watchlist[row.ticker] = {
+          name: row.name || row.ticker,
+          color: row.color || '#4285f4',
+          yf_sym: row.yf_sym || row.ticker,
+          note: row.note || '',
+          data: {},
+        };
+      });
+    }
+  } catch(e) {
+    console.warn('Watchlist laden mislukt:', e.message);
+    // Probeer localStorage
+    const local = JSON.parse(localStorage.getItem('watchlist_v1') || '{}');
+    watchlist = local;
+  }
+}
+
+async function addToWatchlist(ticker, yfSym, name, color, note='') {
+  ticker = ticker.toUpperCase().trim();
+  if (watchlist[ticker]) { showDbStatus(`${ticker} staat al op je watchlist`, 'orange'); return; }
+
+  const row = {
+    ticker,
+    yf_sym:    yfSym || ticker,
+    name:      name  || ticker,
+    color:     color || WL_COLORS[Object.keys(watchlist).length % WL_COLORS.length],
+    note:      note || '',
+    added_at:  new Date().toISOString(),
+  };
+
+  watchlist[ticker] = { name: row.name, color: row.color, yf_sym: row.yf_sym, note: row.note, data: {} };
+
+  try {
+    await sbUpsert('watchlist', [row]);
+    localStorage.setItem('watchlist_v1', JSON.stringify(watchlist));
+  } catch(e) {
+    localStorage.setItem('watchlist_v1', JSON.stringify(watchlist));
+    showDbStatus('Lokaal opgeslagen (cloud tijdelijk niet bereikbaar)', 'orange');
+  }
+
+  // Haal live data op
+  await fetchWlData([ticker]);
+  renderWatchlist();
+  showDbStatus(`✓ ${name || ticker} toegevoegd aan watchlist`, 'green');
+}
+
+async function removeFromWatchlist(ticker) {
+  if (!confirm(`${ticker} verwijderen uit watchlist?`)) return;
+  delete watchlist[ticker];
+  delete wlData[ticker];
+  delete wlNewsCache[ticker];
+  try {
+    await sbDelete('watchlist', `ticker=eq.${ticker}`);
+    localStorage.setItem('watchlist_v1', JSON.stringify(watchlist));
+  } catch(e) {
+    localStorage.setItem('watchlist_v1', JSON.stringify(watchlist));
+  }
+  renderWatchlist();
+  showDbStatus(`✓ ${ticker} verwijderd uit watchlist`, 'green');
+}
+
+async function fetchWlData(tickers) {
+  if (!tickers.length) return;
+  try {
+    // Gebruik dezelfde quotes function
+    const syms = tickers.map(t => watchlist[t]?.yf_sym || t).join(',');
+    const r = await fetch(`/.netlify/functions/quotes?symbols=${encodeURIComponent(syms)}`,
+      { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return;
+    const data = await r.json();
+
+    tickers.forEach(t => {
+      const sym = watchlist[t]?.yf_sym || t;
+      const d   = data[sym];
+      if (d && !d.error && d.price) {
+        wlData[t] = d;
+        // Update naam als we die nog niet hadden
+        if (d.name && (!watchlist[t].name || watchlist[t].name === t)) {
+          watchlist[t].name = d.name.split(' ').slice(0,3).join(' ');
+        }
+        if (d.currency) {
+          watchlist[t].currency = d.currency === 'EUR' ? '€' : '$';
+        }
+      }
+    });
+  } catch(e) {
+    console.warn('WL data fetch failed:', e.message);
+  }
+}
+
+async function fetchWlNews(ticker) {
+  if (wlNewsCache[ticker]) return wlNewsCache[ticker];
+  const sym = watchlist[ticker]?.yf_sym || ticker;
+  try {
+    const r = await fetch(`/.netlify/functions/news?symbol=${encodeURIComponent(sym)}`,
+      { signal: AbortSignal.timeout(12000) });
+    if (!r.ok) return null;
+    const data = await r.json();
+    wlNewsCache[ticker] = data;
+    return data;
+  } catch(e) {
+    return null;
+  }
+}
+
+function setWlFilter(filter, el) {
+  wlFilter = filter;
+  document.querySelectorAll('.wlf').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderWatchlist();
+}
+
+function getFilteredWlTickers() {
+  let tickers = Object.keys(watchlist);
+  if (!tickers.length) return [];
+
+  switch(wlFilter) {
+    case 'winners':
+      return tickers.filter(t => (wlData[t]?.chgPct || 0) > 0)
+        .sort((a,b) => (wlData[b]?.chgPct||0) - (wlData[a]?.chgPct||0));
+    case 'losers':
+      return tickers.filter(t => (wlData[t]?.chgPct || 0) < 0)
+        .sort((a,b) => (wlData[a]?.chgPct||0) - (wlData[b]?.chgPct||0));
+    case 'buy':
+      return tickers.filter(t => {
+        const rk = wlData[t]?.recKey || '';
+        return rk === 'strong_buy' || rk === 'buy';
+      });
+    case 'upside':
+      return tickers.filter(t => wlData[t]?.targetMean && wlData[t]?.price)
+        .sort((a,b) => {
+          const ua = (wlData[a].targetMean - wlData[a].price) / wlData[a].price;
+          const ub = (wlData[b].targetMean - wlData[b].price) / wlData[b].price;
+          return ub - ua;
+        });
+    default:
+      return tickers;
+  }
+}
+
+function renderWatchlist() {
+  const list = document.getElementById('wl-list');
+  if (!list) return;
+
+  const tickers = getFilteredWlTickers();
+
+  if (!Object.keys(watchlist).length) {
+    list.innerHTML = `<div class="wl-empty">
+      <div class="wl-empty-icon">👁</div>
+      <div class="wl-empty-title">Watchlist is leeg</div>
+      <div class="wl-empty-sub">Voeg aandelen toe die je wil volgen.<br>Tik ➕ Toevoegen om te beginnen.</div>
+    </div>`;
+    return;
+  }
+
+  if (!tickers.length) {
+    list.innerHTML = `<div class="wl-empty">
+      <div class="wl-empty-icon">🔍</div>
+      <div class="wl-empty-title">Geen resultaten</div>
+      <div class="wl-empty-sub">Geen aandelen voldoen aan dit filter.</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = tickers.map(t => {
+    const wl = watchlist[t];
+    const d  = wlData[t];
+    const cur = wl.currency || (d?.currency === 'EUR' ? '€' : '$');
+    const price   = d?.price;
+    const chgPct  = d?.chgPct ?? 0;
+    const up      = chgPct >= 0;
+    const pctStr  = price ? `${up?'+':''}${chgPct.toFixed(2)}%` : '—';
+    const priceStr = price ? `${cur}${price.toLocaleString('nl-BE',{minimumFractionDigits:2,maximumFractionDigits:2})}` : '—';
+    const pe      = d?.pe       ? d.pe+'×'         : '—';
+    const tgtMean = d?.targetMean ? `${cur}${Math.round(d.targetMean)}` : '—';
+    const upside  = d?.targetMean && price ? ((d.targetMean-price)/price*100).toFixed(1)+'%' : '—';
+    const rk      = d?.recKey || '';
+    const cons    = rk==='strong_buy'?'Sterk Kopen':rk==='buy'?'Kopen':rk==='hold'?'Houden':rk==='sell'?'Verkopen':'—';
+    const consCol = rk.includes('buy')?'var(--green)':rk==='hold'?'var(--orange)':rk.includes('sell')?'var(--red)':'var(--muted)';
+
+    // Mini sparkline van statische data
+    const wkH = d?.wkHigh || price || 100;
+    const wkL = d?.wkLow  || (price ? price*0.8 : 80);
+    const sparkPct = price && wkH > wkL ? ((price-wkL)/(wkH-wkL)*100).toFixed(0) : 50;
+
+    // News preview uit cache
+    const news = wlNewsCache[t]?.news?.slice(0,2) || [];
+    const newsHtml = news.length ? `<div class="wl-news-preview">
+      ${news.map(n => {
+        const d2 = new Date(n.publishedAt*1000);
+        const dl = d2.toLocaleDateString('nl-BE',{day:'2-digit',month:'short'});
+        return `<div class="wl-news-item">
+          <div class="wl-news-dot"></div>
+          <div class="wl-news-title" onclick="window.open('${n.url}','_blank')">${n.title}</div>
+          <div class="wl-news-date">${dl}</div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+    // De Tijd zoeklink
+    const tidLink = `https://www.tijd.be/zoeken?q=${encodeURIComponent(wl.name||t)}`;
+    const yhLink  = `https://finance.yahoo.com/quote/${encodeURIComponent(wl.yf_sym||t)}`;
+
+    return `<div class="wl-card" style="--wl-color:${wl.color};">
+      <div class="wl-stripe" style="background:${wl.color};"></div>
+      <div class="wl-top">
+        <div class="wl-logo" style="background:linear-gradient(135deg,${wl.color}44,${wl.color});">${t.slice(0,4)}</div>
+        <div class="wl-info">
+          <div class="wl-name">${wl.name}</div>
+          <div class="wl-ticker">${t} · ${wl.yf_sym||t}</div>
+          ${wl.note?`<div style="font-size:10px;color:var(--muted);margin-top:1px;font-style:italic;">${wl.note}</div>`:''}
+        </div>
+        <div class="wl-price-block">
+          <div class="wl-price" style="color:${wl.color};">${priceStr}</div>
+          <div class="wl-chg ${up?'up':'dn'}">${pctStr}</div>
+        </div>
+      </div>
+
+      <!-- 52w positie bar -->
+      <div style="padding:0 14px 8px 18px;">
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:8px;color:var(--muted2);margin-bottom:3px;">
+          <span>${cur}${wkL.toFixed(2)}</span><span>52w</span><span>${cur}${wkH.toFixed(2)}</span>
+        </div>
+        <div style="height:4px;background:var(--s3);border-radius:2px;position:relative;">
+          <div style="position:absolute;left:0;top:0;height:100%;width:${sparkPct}%;background:${wl.color};border-radius:2px;"></div>
+          <div style="position:absolute;left:${sparkPct}%;top:-2px;width:8px;height:8px;background:white;border:2px solid ${wl.color};border-radius:50%;transform:translateX(-50%);"></div>
+        </div>
+      </div>
+
+      <div class="wl-metrics">
+        <div class="wlm"><div class="wlm-l">P/E</div><div class="wlm-v">${pe}</div></div>
+        <div class="wlm"><div class="wlm-l">Gem. Doel</div><div class="wlm-v">${tgtMean}</div></div>
+        <div class="wlm"><div class="wlm-l">Upside</div><div class="wlm-v ${upside!=='—'&&parseFloat(upside)>0?'g':upside!=='—'?'r':''}">${upside!=='—'?(parseFloat(upside)>0?'+':'')+upside:upside}</div></div>
+        <div class="wlm"><div class="wlm-l">Consensus</div><div class="wlm-v" style="font-size:9px;color:${consCol};">${cons}</div></div>
+      </div>
+
+      ${newsHtml}
+
+      <div class="wl-actions">
+        <div class="wl-action" onclick="openWlDetail('${t}')">📈 Detail</div>
+        <div class="wl-action" onclick="loadWlNews('${t}')">📰 Nieuws</div>
+        <div class="wl-action" onclick="window.open('${tidLink}','_blank')">🕰 De Tijd</div>
+        <div class="wl-action" onclick="window.open('${yhLink}','_blank')">📊 Yahoo</div>
+        <div class="wl-action" onclick="openWlNote('${t}')">📝 Notitie</div>
+        <div class="wl-action" style="color:var(--red);" onclick="removeFromWatchlist('${t}')">🗑</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadWlNews(ticker) {
+  showDbStatus(`📰 Nieuws laden voor ${ticker}...`, 'orange');
+  await fetchWlNews(ticker);
+  renderWatchlist();
+  showDbStatus(`✓ Nieuws bijgewerkt`, 'green');
+}
+
+function openWlDetail(ticker) {
+  // Voeg tijdelijk toe aan STOCKS en ga naar detail
+  const wl = watchlist[ticker];
+  const d  = wlData[ticker];
+  if (!STOCKS[ticker]) {
+    const col = wl.color || '#4285f4';
+    STOCKS[ticker] = {
+      name: (wl.name||ticker).split(' ').slice(0,2).join(' '),
+      full: wl.name || ticker,
+      ticker,
+      exchange: d?.exchange || '—',
+      cur: wl.currency || (d?.currency==='EUR'?'€':'$'),
+      color: col,
+      logoBg: `linear-gradient(135deg,${col}44,${col})`,
+      logoTxt: ticker.slice(0,4),
+      price: d?.price || 0,
+      chg: d ? `${(d.chgPct||0)>=0?'+':''}${(d.chgPct||0).toFixed(2)}%` : '—',
+      chgNum: d?.chgPct || 0,
+      dir: (d?.chgPct||0)>=0?'up':'dn',
+      wkH: d?.wkHigh || 0,
+      wkL: d?.wkLow  || 0,
+      ratios: {
+        'P/E (TTM)': d?.pe ? d.pe+'×' : '—',
+        'Beta':      d?.beta ? ''+d.beta : '—',
+        'Div. Yield':d?.divYield ? d.divYield+'%' : '—',
+        '52w Laag':  d?.wkLow  ? (wl.currency||'$')+d.wkLow.toFixed(2)  : '—',
+        '52w Hoog':  d?.wkHigh ? (wl.currency||'$')+d.wkHigh.toFixed(2) : '—',
+      },
+      analysts: {
+        consensus: d?.recKey==='strong_buy'?'Sterk Kopen':d?.recKey==='buy'?'Kopen':d?.recKey==='hold'?'Houden':'—',
+        buy: (d?.strongBuy||0)+(d?.buy||0),
+        hold: d?.hold||0,
+        sell: (d?.strongSell||0)+(d?.sell||0),
+        total: ((d?.strongBuy||0)+(d?.buy||0)+(d?.hold||0)+(d?.strongSell||0)+(d?.sell||0)) || 1,
+        avgTarget:  d?.targetMean  ? Math.round(d.targetMean)  : 0,
+        highTarget: d?.targetHigh  ? Math.round(d.targetHigh)  : 0,
+        lowTarget:  d?.targetLow   ? Math.round(d.targetLow)   : 0,
+      },
+      news: (wlNewsCache[ticker]?.news||[]).slice(0,4).map(n => ({
+        badge: 'nb-cat', bl: 'NIEUWS', date: new Date(n.publishedAt*1000).toLocaleDateString('nl-BE'),
+        time: '', title: n.title, body: n.summary||'', url: n.url,
+      })),
+      priceH: {'1J':[],'6M':[],'3M':[],'YTD':[]},
+      annH:   {'1J':[],'6M':[],'3M':[],'YTD':[]},
+      dayChg: d?.chgPct || 0,
+      ytdChg: 0,
+      next: '—', nextIcon: '📅', nextColor: col,
+    };
+    positions[ticker] = { qty:0, avgCost:0 };
+    YF_SYM[ticker] = wl.yf_sym || ticker;
+  }
+  showPage('detail');
+  setStock(ticker);
+}
+
+function openWlNote(ticker) {
+  const wl  = watchlist[ticker];
+  const existing = document.getElementById('wl-note-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'wl-note-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-end;';
+  modal.innerHTML = `
+    <div style="width:100%;background:var(--s1);border-top:1px solid var(--b2);border-radius:20px 20px 0 0;padding:20px 20px 40px;">
+      <div style="width:36px;height:4px;border-radius:2px;background:var(--b2);margin:0 auto 16px;"></div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;">📝 Notitie — ${wl.name||ticker}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Voeg een persoonlijke notitie toe (bv. waarom je dit aandeel volgt)</div>
+      <textarea id="wl-note-text" rows="4" placeholder="Bijv: Interessant omwille van AI groei. Wacht op P/E < 25×..."
+        style="width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:10px;padding:12px;font-family:var(--sans);font-size:13px;color:var(--text);resize:vertical;outline:none;margin-bottom:12px;">${wl.note||''}</textarea>
+      <button onclick="saveWlNote('${ticker}')" style="width:100%;padding:14px;background:var(--green);border:none;border-radius:12px;font-family:var(--mono);font-size:13px;font-weight:700;color:#000;cursor:pointer;margin-bottom:8px;">✓ Opslaan</button>
+      <button onclick="document.getElementById('wl-note-modal')?.remove()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--b2);border-radius:12px;font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;">Annuleren</button>
+    </div>`;
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('wl-note-text')?.focus(), 200);
+}
+
+async function saveWlNote(ticker) {
+  const txt = document.getElementById('wl-note-text')?.value?.trim() || '';
+  watchlist[ticker].note = txt;
+  document.getElementById('wl-note-modal')?.remove();
+  try {
+    await sbUpsert('watchlist', [{ ticker, yf_sym: watchlist[ticker].yf_sym, name: watchlist[ticker].name, color: watchlist[ticker].color, note: txt }]);
+  } catch(e) {
+    localStorage.setItem('watchlist_v1', JSON.stringify(watchlist));
+  }
+  renderWatchlist();
+  showDbStatus('✓ Notitie opgeslagen', 'green');
+}
+
+function openAddWatchlist() {
+  const existing = document.getElementById('wl-add-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'wl-add-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-end;';
+  modal.innerHTML = `
+    <div style="width:100%;background:var(--s1);border-top:1px solid var(--b2);border-radius:20px 20px 0 0;padding:20px 20px 40px;">
+      <div style="width:36px;height:4px;border-radius:2px;background:var(--b2);margin:0 auto 16px;"></div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:6px;">👁 Toevoegen aan Watchlist</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Voer een ticker in om te volgen. Data wordt automatisch opgehaald.</div>
+      <div style="background:var(--s2);border:1px solid var(--b2);border-radius:12px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">🔍</span>
+        <input id="wl-ticker-input" type="text" placeholder="Ticker (bv. NVDA, ASML.AS, BAS.DE)" autocapitalize="characters"
+          style="flex:1;background:transparent;border:none;outline:none;font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text);text-transform:uppercase;"
+          oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--b2);border-radius:12px;padding:12px 16px;margin-bottom:16px;">
+        <input id="wl-note-input" type="text" placeholder="Optionele notitie (bijv. wacht op dip naar €40)"
+          style="width:100%;background:transparent;border:none;outline:none;font-family:var(--sans);font-size:13px;color:var(--text);">
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:14px;">
+        US: NVDA · MSFT · AMZN &nbsp;|&nbsp; XETRA: BAS.DE · SAP.DE &nbsp;|&nbsp; Euronext: ASML.AS · DSM.AS
+      </div>
+      <button onclick="handleAddWatchlist()" style="width:100%;padding:14px;background:var(--green);border:none;border-radius:12px;font-family:var(--mono);font-size:13px;font-weight:700;color:#000;cursor:pointer;margin-bottom:8px;">
+        ✓ Toevoegen aan Watchlist
+      </button>
+      <button onclick="document.getElementById('wl-add-modal').remove()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--b2);border-radius:12px;font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;">
+        Annuleren
+      </button>
+    </div>`;
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('wl-ticker-input')?.focus(), 200);
+}
+
+async function handleAddWatchlist() {
+  const ticker = document.getElementById('wl-ticker-input')?.value?.trim().toUpperCase();
+  const note   = document.getElementById('wl-note-input')?.value?.trim() || '';
+  if (!ticker) return;
+  document.getElementById('wl-add-modal')?.remove();
+
+  showDbStatus(`🔄 ${ticker} opzoeken...`, 'orange');
+
+  // Zoek via onze quotes function
+  try {
+    const r = await fetch(`/.netlify/functions/quotes?symbols=${encodeURIComponent(ticker)}`,
+      { signal: AbortSignal.timeout(12000) });
+    const data  = await r.json();
+    const d     = data[ticker];
+    if (!d || d.error || !d.price) throw new Error(d?.error || 'Niet gevonden');
+
+    const col   = WL_COLORS[Object.keys(watchlist).length % WL_COLORS.length];
+    const name  = d.name || ticker;
+    const yfSym = ticker; // al in YF formaat
+
+    wlData[ticker] = d;
+    await addToWatchlist(ticker, yfSym, name, col, note);
+  } catch(e) {
+    showDbStatus(`❌ ${ticker}: ${e.message}`, 'orange');
+  }
+}
+
+// ─── KALENDER ENGINE ──────────────────────────────────────────────────────────
+const MONTHS_NL = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+const DAYS_NL   = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
+
+// Alle kalender events (datum: YYYY-MM-DD)
+const CAL_EVENTS = [
+  // ── Portfolio events ──────────────────────────────────────────────────────
+  { date:'2026-05-06', title:'Infineon Q2 FY2026 Earnings',        ticker:'IFX',   type:'earn',  color:'#22c55e', url:'https://finance.yahoo.com/quote/IFX.DE/',   sub:'Na beurs · ~18:00 CET · automotief + industrial' },
+  { date:'2026-05-11', title:'Apple Dividend Ex-Datum',             ticker:'AAPL',  type:'div',   color:'#c0c0c0', url:'https://finance.yahoo.com/quote/AAPL/',     sub:'$0,27/aandeel · uitbetaling 15 mei' },
+  { date:'2026-05-20', title:'Ackermans Q1 2026 Trading Update',    ticker:'ACKB',  type:'earn',  color:'#e8a020', url:'https://www.ackermansvanhaaren.be/nl/investeerders/', sub:'Voor beurs · DEME + Delen PB focus' },
+  { date:'2026-05-30', title:'Sofina Jaarlijkse AV',                ticker:'SOF',   type:'corp',  color:'#8b5cf6', url:'https://www.sofinagroup.com/en/investors',  sub:'Brussel · Tour & Taxis' },
+  { date:'2026-06-03', title:'Broadcom Q2 FY2026 Earnings',         ticker:'AVGO',  type:'earn',  color:'#cc5500', url:'https://finance.yahoo.com/quote/AVGO/',     sub:'Na beurs · ~22:00 CET · AI chips focus' },
+  { date:'2026-06-09', title:'Apple WWDC 2026',                     ticker:'AAPL',  type:'cat',   color:'#c0c0c0', url:'https://developer.apple.com/wwdc26/',       sub:'9–13 juni · Siri 2.0 · Apple Intelligence' },
+  { date:'2026-06-18', title:'IFX Dividend Ex-Datum',               ticker:'IFX',   type:'div',   color:'#22c55e', url:'https://finance.yahoo.com/quote/IFX.DE/',   sub:'~€0,35/aandeel' },
+  { date:'2026-07-15', title:'Apple Q3 FY2026 Earnings',            ticker:'AAPL',  type:'earn',  color:'#c0c0c0', url:'https://investor.apple.com/',               sub:'Na beurs · eind juli · CEO-transitie update' },
+  { date:'2026-07-22', title:'Alphabet Q2 2026 Earnings',           ticker:'GOOGL', type:'earn',  color:'#4285f4', url:'https://abc.xyz/investor/',                 sub:'Na beurs · Cloud $20B+ verwacht' },
+  { date:'2026-08-05', title:'Infineon Q3 FY2026 Earnings',         ticker:'IFX',   type:'earn',  color:'#22c55e', url:'https://www.infineon.com/cms/en/about-infineon/investor/', sub:'Na beurs · EV herstel check' },
+  { date:'2026-08-12', title:'Sofina H1 Resultaten',                ticker:'SOF',   type:'earn',  color:'#8b5cf6', url:'https://www.sofinagroup.com/en/investors',  sub:'Verwacht half augustus · NAV evolutie' },
+  { date:'2026-09-15', title:'Ackermans H1 2026 Resultaten',        ticker:'ACKB',  type:'earn',  color:'#e8a020', url:'https://www.ackermansvanhaaren.be/nl/investeerders/', sub:'Voor beurs' },
+  { date:'2026-10-01', title:'Apple Q4 FY2026 Earnings',            ticker:'AAPL',  type:'earn',  color:'#c0c0c0', url:'https://investor.apple.com/',               sub:'Na beurs · FY2026 volledig jaar' },
+  { date:'2026-10-15', title:'Alphabet Q3 2026 Earnings',           ticker:'GOOGL', type:'earn',  color:'#4285f4', url:'https://abc.xyz/investor/',                 sub:'Na beurs' },
+  { date:'2026-11-12', title:'Infineon Q4 FY2026 + Jaarresultaten', ticker:'IFX',   type:'earn',  color:'#22c55e', url:'https://www.infineon.com/cms/en/about-infineon/investor/', sub:'Na beurs · FY2026 volledig jaar' },
+
+  // ── Macro events — Centrale Banken ────────────────────────────────────────
+  { date:'2026-06-11', title:'ECB Rentebeslissing',       ticker:'MACRO', type:'macro', color:'#f59e0b', url:'https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html', sub:'Frankfurt · Invloed op Euronext aandelen' },
+  { date:'2026-07-30', title:'Fed Rentebeslissing (FOMC)',ticker:'MACRO', type:'macro', color:'#f59e0b', url:'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm', sub:'Washington · Impact op USD + globale markten' },
+  { date:'2026-09-10', title:'ECB Rentebeslissing',       ticker:'MACRO', type:'macro', color:'#f59e0b', url:'https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html', sub:'Frankfurt · Post-zomer beoordeling' },
+  { date:'2026-09-17', title:'Fed Rentebeslissing (FOMC)',ticker:'MACRO', type:'macro', color:'#f59e0b', url:'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm', sub:'Washington · Jackson Hole follow-through' },
+  { date:'2026-10-29', title:'ECB Rentebeslissing',       ticker:'MACRO', type:'macro', color:'#f59e0b', url:'https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html', sub:'Frankfurt · Q4 beoordeling' },
+  { date:'2026-11-05', title:'Fed Rentebeslissing (FOMC)',ticker:'MACRO', type:'macro', color:'#f59e0b', url:'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm', sub:'Washington' },
+  { date:'2026-12-10', title:'ECB Rentebeslissing',       ticker:'MACRO', type:'macro', color:'#f59e0b', url:'https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html', sub:'Frankfurt · Jaareinde beslissing' },
+  { date:'2026-12-16', title:'Fed Rentebeslissing (FOMC)',ticker:'MACRO', type:'macro', color:'#f59e0b', url:'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm', sub:'Washington · Laatste FOMC 2026' },
+
+  // ── Macro events — Economische data ───────────────────────────────────────
+  { date:'2026-06-05', title:'US Arbeidsmarktrapport (NFP)',  ticker:'MACRO', type:'macro', color:'#f97316', url:'https://www.bls.gov/news.release/empsit.toc.htm', sub:'Non-Farm Payrolls · Beweging USD + aandelen' },
+  { date:'2026-07-10', title:'US CPI Inflatie Juni',          ticker:'MACRO', type:'macro', color:'#f97316', url:'https://www.bls.gov/cpi/',                        sub:'Consumer Price Index · Fed-pivot indicator' },
+  { date:'2026-07-30', title:'US GDP Q2 2026 (Eerste schatting)', ticker:'MACRO', type:'macro', color:'#f97316', url:'https://www.bea.gov/data/gdp/gross-domestic-product', sub:'Recessie-indicator · S&P500 impact' },
+  { date:'2026-08-07', title:'US Arbeidsmarktrapport (NFP)',  ticker:'MACRO', type:'macro', color:'#f97316', url:'https://www.bls.gov/news.release/empsit.toc.htm', sub:'Non-Farm Payrolls' },
+  { date:'2026-08-21', title:'Jackson Hole Symposium',        ticker:'MACRO', type:'macro', color:'#ef4444', url:'https://www.kansascityfed.org/research/jackson-hole-economic-symposium/', sub:'Fed-voorzitter Powell keynote · Rente-signalen' },
+  { date:'2026-09-04', title:'US Arbeidsmarktrapport (NFP)',  ticker:'MACRO', type:'macro', color:'#f97316', url:'https://www.bls.gov/news.release/empsit.toc.htm', sub:'Non-Farm Payrolls' },
+  { date:'2026-09-30', title:'Eurozone CPI Inflatie (Flash)', ticker:'MACRO', type:'macro', color:'#f97316', url:'https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Inflation_in_the_euro_area', sub:'ECB-indicator · Euro + Euronext impact' },
+  { date:'2026-10-29', title:'EZ GDP Q3 2026 (Flash)',        ticker:'MACRO', type:'macro', color:'#f97316', url:'https://ec.europa.eu/eurostat/',                  sub:'Eurozone groei · Belgische economie' },
+
+  // ── Geopolitiek + Technologie ─────────────────────────────────────────────
+  { date:'2026-05-23', title:'NVIDIA GTC Conference 2026',    ticker:'NVDA',  type:'cat',   color:'#76b900', url:'https://www.nvidia.com/gtc/',                    sub:'AI-hardware roadmap · Impact op IFX + sector' },
+  { date:'2026-06-15', title:'Microsoft Build Conference',    ticker:'MSFT',  type:'cat',   color:'#00a4ef', url:'https://mybuild.microsoft.com/',                 sub:'Azure + AI-tools · Cloud sector impact' },
+  { date:'2026-07-01', title:'EU AI Act volledig van kracht', ticker:'MACRO', type:'macro', color:'#8b5cf6', url:'https://digital-strategy.ec.europa.eu/en/policies/european-approach-artificial-intelligence', sub:'Regulering AI · Impact tech-aandelen' },
+  { date:'2026-09-01', title:'iPhone 18 Verwachte Launch',    ticker:'AAPL',  type:'cat',   color:'#c0c0c0', url:'https://www.apple.com/',                         sub:'Supercyclus upgrade-verwachtingen' },
+  { date:'2026-10-15', title:'ASML Q3 Earnings',              ticker:'ASML',  type:'earn',  color:'#0066b2', url:'https://finance.yahoo.com/quote/ASML.AS/',       sub:'Euronext Amsterdam · Chip-sector barometer' },
+  { date:'2026-11-01', title:'COP31 Klimaattop',              ticker:'MACRO', type:'macro', color:'#22c55e', url:'https://unfccc.int/',                             sub:'Klimaatbeleid · DEME offshore wind / ESG impact' },
+  { date:'2026-11-03', title:'US Midterm Vooruitblik (2026)', ticker:'MACRO', type:'macro', color:'#ef4444', url:'https://www.politico.com/election-results/2026/', sub:'Politieke impact op markten' },
+  { date:'2026-12-01', title:'OPEC+ Productievergadering',    ticker:'MACRO', type:'macro', color:'#f59e0b', url:'https://www.opec.org/',                          sub:'Olieprijzen · Impact energiesector + inflatie' },
+];
+
+const TYPE_COLOR = { earn:'#22c55e', div:'#f59e0b', cat:'#4285f4', corp:'#8b5cf6', macro:'#ef4444' };
+const TYPE_LABEL = { earn:'Earnings', div:'Dividend', cat:'Event', corp:'Corporate', macro:'Macro' };
+
+let calView   = 'month';
+let calOffset = 0;
+let calFilter = 'all';
+const calToday = new Date();
+
+function setCalView(view, el) {
+  calView   = view;
+  calOffset = 0;
+  document.querySelectorAll('.cal-view-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderCalendar();
+}
+
+function setCalFilter(f, el) {
+  calFilter = f;
+  document.querySelectorAll('[id^="calf-"]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderCalendar();
+}
+
+function filterEvents(evts) {
+  if (calFilter === 'all') return evts;
+  return evts.filter(e => e.type === calFilter);
+}
+
+function calNav(dir) {
+  calOffset += dir;
+  renderCalendar();
+}
+
+function getCalDates() {
+  const now = new Date(calToday);
+  if (calView === 'week') {
+    now.setDate(now.getDate() + calOffset * 7);
+    const dow = (now.getDay() + 6) % 7; // Mon=0
+    const mon = new Date(now); mon.setDate(now.getDate() - dow);
+    return { start: mon, label: `Week van ${mon.getDate()} ${MONTHS_NL[mon.getMonth()]} ${mon.getFullYear()}` };
+  } else if (calView === 'month') {
+    const d = new Date(calToday.getFullYear(), calToday.getMonth() + calOffset, 1);
+    return { start: d, label: `${MONTHS_NL[d.getMonth()]} ${d.getFullYear()}` };
+  } else {
+    const y = calToday.getFullYear() + calOffset;
+    return { start: new Date(y, 0, 1), label: `${y}` };
+  }
+}
+
+function eventsOn(dateStr) {
+  return CAL_EVENTS.filter(e => e.date === dateStr);
+}
+
+function eventsInMonth(year, month) {
+  const prefix = `${year}-${String(month+1).padStart(2,'0')}`;
+  return CAL_EVENTS.filter(e => e.date.startsWith(prefix));
+}
+
+function dateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function showEventDetail(evt) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-end;';
+  const col = TYPE_COLOR[evt.type] || '#888';
+  modal.innerHTML = `
+    <div style="width:100%;background:var(--s1);border-top:3px solid ${col};border-radius:20px 20px 0 0;padding:20px 20px 40px;">
+      <div style="width:36px;height:4px;border-radius:2px;background:var(--b2);margin:0 auto 16px;"></div>
+      <div style="font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:${col}22;color:${col};display:inline-block;margin-bottom:10px;">${TYPE_LABEL[evt.type]||'Event'}</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:4px;">${evt.title}</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:4px;">${evt.ticker} · ${new Date(evt.date+'T12:00:00').toLocaleDateString('nl-BE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">${evt.sub||''}</div>
+      <a href="${evt.url}" target="_blank" rel="noopener" style="display:block;width:100%;padding:14px;background:${col};border:none;border-radius:12px;font-family:var(--mono);font-size:13px;font-weight:700;color:#000;cursor:pointer;text-align:center;text-decoration:none;margin-bottom:8px;">🔗 Meer info</a>
+      <button onclick="this.closest('[style]').remove()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--b2);border-radius:12px;font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;">Sluiten</button>
+    </div>`;
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+function renderCalendar() {
+  const body = document.getElementById('cal-body');
+  const navL = document.getElementById('cal-nav-label');
+  const { start, label } = getCalDates();
+  if (navL) navL.textContent = label;
+
+  if (calView === 'week') {
+    // 7-day week view with event list
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    const todayStr = dateStr(calToday);
+    body.innerHTML = `
+      <div class="cal-grid" style="margin-bottom:10px;">
+        ${DAYS_NL.map(d => `<div class="cal-grid-hdr">${d}</div>`).join('')}
+        ${days.map(d => {
+          const ds     = dateStr(d);
+          const evts   = eventsOn(ds);
+          const isTod  = ds === todayStr;
+          return `<div class="cal-day-cell ${isTod?'today':''}" onclick="void(0)">
+            <div class="cal-day-num">${d.getDate()}</div>
+            ${evts.map(e => `<span class="cal-event-dot" style="background:${TYPE_COLOR[e.type]}22;color:${TYPE_COLOR[e.type]};cursor:pointer;" onclick='showEventDetail(${JSON.stringify(e)})'>${e.ticker}</span>`).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${days.flatMap(d => filterEvents(eventsOn(dateStr(d)))).map(e => `
+          <div class="cal-item" style="border-color:${TYPE_COLOR[e.type]}55;cursor:pointer;" onclick='showEventDetail(${JSON.stringify(e)})'>
+            <div class="cal-date-block">
+              <div class="cal-day" style="color:${TYPE_COLOR[e.type]};">${new Date(e.date+'T12:00:00').getDate()}</div>
+              <div class="cal-month">${MONTHS_NL[new Date(e.date+'T12:00:00').getMonth()].slice(0,3).toUpperCase()}</div>
+            </div>
+            <div class="cal-div"></div>
+            <div class="cal-info">
+              <div class="cal-title">${e.title}</div>
+              <div class="cal-sub">${e.ticker} · ${e.sub||''}</div>
+              <div style="margin-top:4px;"><a href="${e.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">Bron →</a></div>
+            </div>
+            <div class="cal-badge" style="background:${TYPE_COLOR[e.type]}22;color:${TYPE_COLOR[e.type]};">${TYPE_LABEL[e.type]}</div>
+          </div>`).join('') || '<div style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;padding:20px;">Geen events deze week</div>'}
+      </div>`;
+
+  } else if (calView === 'month') {
+    // Full month grid
+    const year  = start.getFullYear(), month = start.getMonth();
+    const first = new Date(year, month, 1);
+    const last  = new Date(year, month+1, 0);
+    const startDow = (first.getDay()+6)%7; // Mon=0
+    const todayStr = dateStr(calToday);
+
+    const cells = [];
+    // Prev month padding
+    for (let i = startDow-1; i >= 0; i--) {
+      const d = new Date(year, month, -i);
+      cells.push({ d, other:true });
+    }
+    for (let i = 1; i <= last.getDate(); i++) {
+      cells.push({ d: new Date(year, month, i), other:false });
+    }
+    // Next month padding
+    while (cells.length % 7 !== 0) {
+      const d = new Date(year, month+1, cells.length - last.getDate() - startDow + 1);
+      cells.push({ d, other:true });
+    }
+
+    body.innerHTML = `
+      <div class="cal-grid" style="margin-bottom:10px;">
+        ${DAYS_NL.map(d=>`<div class="cal-grid-hdr">${d}</div>`).join('')}
+        ${cells.map(({d,other}) => {
+          const ds   = dateStr(d);
+          const evts = eventsOn(ds);
+          const isTod= ds === todayStr;
+          return `<div class="cal-day-cell ${isTod?'today':''} ${other?'other-month':''}">
+            <div class="cal-day-num">${d.getDate()}</div>
+            ${evts.map(e=>`<span class="cal-event-dot" style="background:${TYPE_COLOR[e.type]}25;color:${TYPE_COLOR[e.type]};cursor:pointer;" onclick='showEventDetail(${JSON.stringify(e)})'>${e.ticker}</span>`).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${filterEvents(eventsInMonth(year,month)).map(e=>`
+          <div class="cal-item" style="border-color:${TYPE_COLOR[e.type]}55;cursor:pointer;" onclick='showEventDetail(${JSON.stringify(e)})'>
+            <div class="cal-date-block">
+              <div class="cal-day" style="color:${TYPE_COLOR[e.type]};">${new Date(e.date+'T12:00:00').getDate()}</div>
+              <div class="cal-month">${MONTHS_NL[new Date(e.date+'T12:00:00').getMonth()].slice(0,3).toUpperCase()}</div>
+            </div>
+            <div class="cal-div"></div>
+            <div class="cal-info">
+              <div class="cal-title">${e.title}</div>
+              <div class="cal-sub">${e.ticker} · ${e.sub||''}</div>
+            </div>
+            <div class="cal-badge" style="background:${TYPE_COLOR[e.type]}22;color:${TYPE_COLOR[e.type]};">${TYPE_LABEL[e.type]}</div>
+          </div>`).join('') || ''}
+      </div>`;
+
+  } else {
+    // Year view — 12 month cards
+    const year = start.getFullYear();
+    body.innerHTML = `<div class="cal-year-grid">
+      ${Array.from({length:12},(_,m) => {
+        const evts = filterEvents(eventsInMonth(year, m));
+        const hasToday = calToday.getFullYear()===year && calToday.getMonth()===m;
+        return `<div class="cal-month-card ${hasToday?'cal-day-cell today':''}" onclick="calOffset=${m - calToday.getMonth() + (year-calToday.getFullYear())*12};setCalView('month',document.getElementById('cvb-month'))">
+          <div class="cal-month-name">${MONTHS_NL[m].toUpperCase()}</div>
+          <div class="cal-month-events">
+            ${evts.length ? evts.map(e=>`<div class="cal-month-event" style="border-color:${TYPE_COLOR[e.type]};background:${TYPE_COLOR[e.type]}15;color:${TYPE_COLOR[e.type]};">${new Date(e.date+'T12:00:00').getDate()} ${e.ticker}</div>`).join('') : '<div style="font-family:var(--mono);font-size:9px;color:var(--muted2);">Geen events</div>'}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
   }
 }
 
@@ -1544,32 +3477,74 @@ function showPage(page){
   document.querySelectorAll('.bnav').forEach(n=>n.classList.remove('active'));
   document.getElementById('nav-'+page).classList.add('active');
   if(page==='detail'){buildTabs();renderDetail(activeStock);}
+  if(page==='watchlist'){renderWatchlist();}
+  if(page==='calendar'){renderCalendar();}
   window.scrollTo(0,0);
+}
+
+function lockDashboard() {
+  pinUnlocked = false;
+  sessionStorage.removeItem(SESSION_KEY);
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pin-overlay').style.display = 'flex';
+  renderSummary(); renderOverview();
+  if (activePage === 'detail') renderDetail(activeStock);
+  showDbStatus('🔒 Dashboard vergrendeld', 'orange');
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 (async function init() {
-  // Ensure all default tickers have a position slot
-  Object.keys(STOCKS).forEach(t => { positions[t] = {qty:0, avgCost:0}; });
+  // 0. PIN systeem initialiseren (Supabase-backed voor cross-device sync)
+  await initPin();
 
-  // 1. Render immediately with static data
-  renderSummary(); renderOverview(); buildTabs(); renderDetail('AAPL');
+  // 1. Render meteen met statische data (zonder posities)
+  renderSummary(); renderOverview(); buildTabs();
+  const firstActive = Object.keys(STOCKS)[0] || 'AAPL';
+  renderDetail(firstActive);
 
-  // 2. Load positions from Supabase
+  // 2. Laad uit Supabase — dit bepaalt welke tickers er zijn
   const el = document.querySelector('.live-badge');
   if (el) el.innerHTML = '<div class="live-dot"></div>DB...';
-  await loadTickersFromDB();
-  renderSummary(); renderOverview(); buildTabs();
 
-  // 3. Fetch live prices
+  // Laad sjablonen, tickers en watchlist parallel
+  await Promise.all([
+    loadTemplates(),
+    loadTickersFromDB(),
+    loadWatchlist(),
+  ]);
+
+  // Als STOCKS nu leeg is na DB-sync, render met wat er is
+  if (Object.keys(STOCKS).length === 0) {
+    showDbStatus('⚠️ Geen aandelen in portefeuille. Voeg er toe via ➕', 'orange');
+  } else {
+    const active = Object.keys(STOCKS)[0];
+    activeStock = active;
+    renderSummary(); renderOverview(); buildTabs(); renderDetail(active);
+  }
+
+  // 3. Haal live koersen op (portfolio + watchlist)
   if (el) el.innerHTML = '<div class="live-dot"></div>KOERSEN...';
   await refreshPrices(true);
+
+  // Watchlist data ophalen
+  const wlTickers = Object.keys(watchlist);
+  if (wlTickers.length) {
+    fetchWlData(wlTickers).then(() => renderWatchlist());
+  }
   if (el) el.innerHTML = '<div class="live-dot"></div>LIVE';
   lastRefresh = new Date();
   updateRefreshBadge();
 
-  // 4. Start auto-refresh every 5 min
+  // 4. Auto-refresh elke 5 min
   startAutoRefresh();
+
+  // 5. Hereken grafiek bij schermrotatie
+  window.addEventListener('resize', () => {
+    if (activePage === 'detail' && getCS(activeStock).candles.length) {
+      drawChart(activeStock);
+    }
+  });
 })();
 </script>
 </body>
