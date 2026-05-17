@@ -547,7 +547,9 @@ canvas.ichart-overlay{position:absolute;top:0;left:0;width:100%;pointer-events:n
 
 <script>
 // ─── STOCK DATA ──────────────────────────────────────────────────────────────
-const STOCKS = {
+// STOCK_META bevat statische metadata (kleur, logo, ratios, news, analisten)
+// STOCKS wordt dynamisch gevuld vanuit de DB — start altijd leeg
+const STOCK_META = {
   AAPL:{
     name:'Apple', full:'Apple Inc.', ticker:'AAPL', exchange:'NASDAQ · USD', cur:'$',
     price:292.68, chg:'+0,20%', chgNum:0.20, dir:'up',
@@ -971,18 +973,11 @@ function applyTemplate(tpl, ticker) {
 }
 
 // ─── POSITIONS & TICKERS (dynamic — loaded from Supabase) ────────────────────
+// STOCKS wordt gevuld door loadTickersFromDB() — start leeg zodat verwijderde tickers echt weg zijn
+const STOCKS = {};
 let positions = {};
 let activeStock='AAPL', activePage='overview', ovMode='rendement', chartPeriod='1J';
 let dbReady = false;
-
-// Default stock metadata (static info, prices overwritten by live fetch)
-const STOCK_META = {
-  AAPL: { name:'Apple',    full:'Apple Inc.',              color:'#c0c0c0', logoBg:'linear-gradient(135deg,#3a3a3a,#a0a0a0)', logoTxt:'AAPL', cur:'$', exchange:'NASDAQ' },
-  GOOGL:{ name:'Alphabet', full:'Alphabet Inc.',           color:'#4285f4', logoBg:'linear-gradient(135deg,#1a3a8f,#4285f4)', logoTxt:'G',    cur:'$', exchange:'NASDAQ' },
-  ACKB: { name:'Ackermans',full:'Ackermans & Van Haaren',  color:'#e8a020', logoBg:'linear-gradient(135deg,#7a3800,#e8a020)', logoTxt:'AVH',  cur:'€', exchange:'Euronext BRU' },
-  SOF:  { name:'Sofina',   full:'Sofina SA',               color:'#8b5cf6', logoBg:'linear-gradient(135deg,#3b0764,#8b5cf6)', logoTxt:'SOF',  cur:'€', exchange:'Euronext BRU' },
-  IFX:  { name:'Infineon', full:'Infineon Technologies AG',color:'#22c55e', logoBg:'linear-gradient(135deg,#052e16,#22c55e)', logoTxt:'IFX',  cur:'€', exchange:'XETRA' },
-};
 
 // Live price cache — filled by fetchLivePrices()
 let liveData = {};  // { AAPL: { price, chg, chgNum, dir, wkH, wkL, pe, mktcap, analystLow, analystMid, analystHigh, analystCount, ... } }
@@ -1662,11 +1657,12 @@ async function fetchNewsForTicker(ticker) {
 }
 
 async function fetchHistory(ticker, period) {
-  const { range, interval } = CHART_PERIODS[period] || CHART_PERIODS['1J'];
-  const sym = YF_HISTORY_SYM[ticker] || ticker;
-  const url = `/.netlify/functions/history?symbol=${encodeURIComponent(sym)}&period=${range}&interval=${interval}`;
-  const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  if (!r.ok) throw new Error(`History ${r.status}`);
+  // Stuur de portfolio ticker + dashboard period code naar history.mjs
+  // history.mjs doet zelf de conversie naar Twelve Data formaat
+  const sym = ticker; // gebruik portfolio ticker (ACKB, IFX, ...) direct
+  const url = `/.netlify/functions/history?symbol=${encodeURIComponent(sym)}&period=${encodeURIComponent(period)}`;
+  const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
+  if (!r.ok) throw new Error(`History ${r.status}: ${await r.text().catch(()=>'')}`);
   const data = await r.json();
   if (data.error) throw new Error(data.error);
   return data.candles || [];
@@ -2618,13 +2614,14 @@ async function addTicker(ticker) {
   if (!ticker) return;
   if (STOCKS[ticker]) { showDbStatus(`${ticker} zit al in je portefeuille`, 'orange'); return; }
 
-  showDbStatus(`🔄 ${ticker} opzoeken...`, 'orange');
+  showDbStatus(`🔄 ${ticker} opzoeken via Twelve Data...`, 'orange');
   try {
-    // Gebruik onze eigen Netlify function om Yahoo Finance te bevragen
-    const sym = YF_SYM[ticker] || ticker;
-    const data = await fetchAllQuotes([ticker]);
-    const d = data[sym];
-    if (!d || d.error || !d.price) throw new Error(d?.error || 'Ticker niet gevonden. Probeer bv. NVDA, AKA.BR, IFX.DE');
+    // quotes.mjs doet de Twelve Data conversie intern
+    const r    = await fetch(`/.netlify/functions/quotes?symbols=${encodeURIComponent(ticker)}`,
+      { signal: AbortSignal.timeout(15000) });
+    const data = await r.json();
+    const d    = data[ticker];
+    if (!d || d.error || !d.price) throw new Error(d?.error || 'Ticker niet gevonden. Probeer bv. NVDA, ASML.AS, BAS.DE');
     const name = d.name     || ticker;
     const exch = d.exchange  || '—';
     const cur  = d.currency === 'EUR' ? '€' : '$';
@@ -2653,7 +2650,7 @@ async function addTicker(ticker) {
       next: '—', nextIcon: '📅', nextColor: col
     };
     positions[ticker] = { qty: 0, avgCost: 0 };
-    YF_SYM[ticker] = sym; // voeg toe aan symboolmapping
+    YF_SYM[ticker] = ticker; // gebruik portfolio ticker direct
 
     // Save to Supabase
     await sbUpsert('portfolio_positions', [{
@@ -2674,20 +2671,36 @@ async function addTicker(ticker) {
 
 async function removeTicker(ticker) {
   if (!confirm(`Verwijder ${ticker} uit je portefeuille?`)) return;
+
+  // Verwijder meteen uit geheugen
   delete STOCKS[ticker];
   delete positions[ticker];
   delete liveData[ticker];
+
+  // Verwijder uit Supabase
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/portfolio_positions?ticker=eq.${ticker}`, {
-      method: 'DELETE',
-      headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }
-    });
-    if (!r.ok) console.warn('Delete failed:', await r.text());
-  } catch(e) { console.warn('Remove ticker error:', e.message); }
-  if (activeStock === ticker) activeStock = Object.keys(STOCKS)[0] || 'AAPL';
+    await sbDelete('portfolio_positions', `ticker=eq.${ticker}`);
+  } catch(e) {
+    console.warn('Remove ticker error:', e.message);
+  }
+
+  // Als alle tickers weg zijn — flag bewaren
+  if (Object.keys(STOCKS).length === 0) {
+    localStorage.setItem('pf_ever_had_data', '1'); // blijft op 1 zodat we niet opnieuw seeden
+  }
+
+  // Switch naar ander aandeel als nodig
+  if (activeStock === ticker) {
+    activeStock = Object.keys(STOCKS)[0] || null;
+  }
+
   renderOverview(); buildTabs();
-  if (activePage === 'detail') renderDetail(activeStock);
-  showDbStatus(`✓ ${ticker} verwijderd`, 'green');
+  if (activePage === 'detail') {
+    if (activeStock) renderDetail(activeStock);
+    else document.getElementById('detail-area').innerHTML =
+      `<div style="padding:40px 20px;text-align:center;color:var(--muted);font-family:var(--mono);">Geen aandelen in portefeuille. Voeg toe via ➕</div>`;
+  }
+  showDbStatus(`✓ ${ticker} verwijderd uit portefeuille`, 'green');
 }
 
 // ─── ADD TICKER MODAL ─────────────────────────────────────────────────────────
@@ -2739,62 +2752,73 @@ async function loadTickersFromDB() {
 
     if (data && data.length > 0) {
       const dbSet = new Set(data.map(r => r.ticker));
+      localStorage.setItem('pf_ever_had_data', '1');
 
-      // Verwijder dynamisch toegevoegde tickers die niet meer in DB zitten
+      // Bouw STOCKS op vanuit DB — alleen tickers die IN de DB zitten
+      // Verwijder tickers die al in STOCKS zaten maar niet meer in DB
       Object.keys(STOCKS).forEach(t => {
-        if (!dbSet.has(t) && !DEFAULT_TICKERS.includes(t)) {
+        if (!dbSet.has(t)) {
           delete STOCKS[t]; delete positions[t]; delete liveData[t];
         }
       });
 
-      // Verwijder default tickers die bewust werden verwijderd uit DB
-      DEFAULT_TICKERS.forEach(t => {
-        if (!dbSet.has(t) && STOCKS[t]) {
-          delete STOCKS[t]; delete positions[t]; delete liveData[t];
-        }
-      });
-
-      // Laad posities + voeg nieuwe/onbekende tickers toe
+      // Voeg DB-tickers toe aan STOCKS (via STOCK_META of dynamisch)
       data.forEach(row => {
         positions[row.ticker] = {
           qty:     parseFloat(row.qty)      || 0,
           avgCost: parseFloat(row.avg_cost) || 0
         };
         if (!STOCKS[row.ticker]) {
-          const palette = ['#ff6b6b','#feca57','#48dbfb','#54a0ff','#5f27cd','#00d2d3','#ff9f43'];
-          const col = palette[Object.keys(STOCKS).length % palette.length];
-          STOCKS[row.ticker] = {
-            name:row.ticker, full:row.ticker, ticker:row.ticker,
-            exchange:'—', cur:'$', color:col,
-            logoBg:`linear-gradient(135deg,#1a1a2e,${col})`,
-            logoTxt:row.ticker.slice(0,4),
-            price:0, chg:'—', chgNum:0, dir:'up', wkH:0, wkL:0,
-            ratios:{}, news:[],
-            analysts:{consensus:'—',buy:0,hold:0,sell:0,total:0,avgTarget:0,highTarget:0,lowTarget:0},
-            priceH:{'1J':[],'6M':[],'3M':[],'YTD':[]},
-            annH:{'1J':[],'6M':[],'3M':[],'YTD':[]},
-            dayChg:0, ytdChg:0, next:'—', nextIcon:'📅', nextColor:col
-          };
+          // Gebruik statische metadata als beschikbaar
+          if (STOCK_META[row.ticker]) {
+            STOCKS[row.ticker] = { ...STOCK_META[row.ticker] };
+          } else {
+            // Dynamische ticker zonder metadata
+            const palette = ['#ff6b6b','#feca57','#48dbfb','#54a0ff','#5f27cd','#00d2d3','#ff9f43'];
+            const col = palette[Object.keys(STOCKS).length % palette.length];
+            STOCKS[row.ticker] = {
+              name:row.ticker, full:row.ticker, ticker:row.ticker,
+              exchange:'—', cur:'$', color:col,
+              logoBg:`linear-gradient(135deg,#1a1a2e,${col})`,
+              logoTxt:row.ticker.slice(0,4),
+              price:0, chg:'—', chgNum:0, dir:'up', wkH:0, wkL:0,
+              ratios:{}, news:[], analysts:{consensus:'—',buy:0,hold:0,sell:0,total:0,avgTarget:0,highTarget:0,lowTarget:0},
+              priceH:{'1J':[],'6M':[],'3M':[],'YTD':[]},
+              annH:{'1J':[],'6M':[],'3M':[],'YTD':[]},
+              dayChg:0, ytdChg:0, next:'—', nextIcon:'📅', nextColor:col
+            };
+          }
           if (!YF_SYM[row.ticker]) YF_SYM[row.ticker] = row.ticker;
         }
       });
 
     } else {
-      // Lege DB — seed defaults + schrijf naar DB
-      DEFAULT_TICKERS.forEach(t => {
-        if (!positions[t]) positions[t] = {qty:0, avgCost:0};
-      });
-      sbUpsert('portfolio_positions',
-        DEFAULT_TICKERS.map(t => ({ticker:t, qty:0, avg_cost:0, updated_at:new Date().toISOString()}))
-      ).catch(() => {});
+      // DB is leeg
+      const everHadData = localStorage.getItem('pf_ever_had_data');
+      if (!everHadData) {
+        // Écht eerste gebruik — seed defaults vanuit STOCK_META
+        DEFAULT_TICKERS.forEach(t => {
+          if (STOCK_META[t]) STOCKS[t] = { ...STOCK_META[t] };
+          positions[t] = { qty:0, avgCost:0 };
+        });
+        sbUpsert('portfolio_positions',
+          DEFAULT_TICKERS.map(t => ({ticker:t, qty:0, avg_cost:0, updated_at:new Date().toISOString()}))
+        ).catch(() => {});
+        localStorage.setItem('pf_ever_had_data', '1');
+      }
+      // Als everHadData al gezet is: gebruiker heeft alles verwijderd → STOCKS blijft leeg
     }
     dbReady = true;
+
   } catch(e) {
     console.warn('loadTickersFromDB failed:', e.message);
-    // Fallback: gebruik bestaande STOCKS + localStorage
-    DEFAULT_TICKERS.forEach(t => { if(!positions[t]) positions[t]={qty:0,avgCost:0}; });
-    const local = JSON.parse(localStorage.getItem('pf_pos_v2')||'{}');
-    Object.keys(local).forEach(t => { if(positions[t]!==undefined) positions[t]=local[t]; });
+    // Offline fallback — laad defaults uit STOCK_META
+    const everHadData = localStorage.getItem('pf_ever_had_data');
+    if (!everHadData) {
+      DEFAULT_TICKERS.forEach(t => {
+        if (STOCK_META[t]) { STOCKS[t] = { ...STOCK_META[t] }; positions[t] = {qty:0,avgCost:0}; }
+      });
+    }
     showDbStatus('⚠️ Offline — lokale data', 'orange');
     dbReady = true;
   }
@@ -2891,19 +2915,18 @@ async function removeFromWatchlist(ticker) {
 async function fetchWlData(tickers) {
   if (!tickers.length) return;
   try {
-    // Gebruik dezelfde quotes function
-    const syms = tickers.map(t => watchlist[t]?.yf_sym || t).join(',');
-    const r = await fetch(`/.netlify/functions/quotes?symbols=${encodeURIComponent(syms)}`,
+    // quotes.mjs verwacht de originele ticker en geeft { TICKER: data } terug
+    const syms = tickers.join(',');
+    const r    = await fetch(`/.netlify/functions/quotes?symbols=${encodeURIComponent(syms)}`,
       { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return;
     const data = await r.json();
 
     tickers.forEach(t => {
-      const sym = watchlist[t]?.yf_sym || t;
-      const d   = data[sym];
+      // Response key is altijd de originele ticker die we stuurden
+      const d = data[t];
       if (d && !d.error && d.price) {
         wlData[t] = d;
-        // Update naam als we die nog niet hadden
         if (d.name && (!watchlist[t].name || watchlist[t].name === t)) {
           watchlist[t].name = d.name.split(' ').slice(0,3).join(' ');
         }
@@ -3216,22 +3239,46 @@ async function handleAddWatchlist() {
   if (!ticker) return;
   document.getElementById('wl-add-modal')?.remove();
 
-  showDbStatus(`🔄 ${ticker} opzoeken...`, 'orange');
+  if (watchlist[ticker]) {
+    showDbStatus(`${ticker} staat al op je watchlist`, 'orange');
+    return;
+  }
 
-  // Zoek via onze quotes function
+  showDbStatus(`🔄 ${ticker} opzoeken via Twelve Data...`, 'orange');
+
   try {
-    const r = await fetch(`/.netlify/functions/quotes?symbols=${encodeURIComponent(ticker)}`,
-      { signal: AbortSignal.timeout(12000) });
-    const data  = await r.json();
-    const d     = data[ticker];
-    if (!d || d.error || !d.price) throw new Error(d?.error || 'Niet gevonden');
+    const r    = await fetch(`/.netlify/functions/quotes?symbols=${encodeURIComponent(ticker)}`,
+      { signal: AbortSignal.timeout(15000) });
+    const data = await r.json();
+    // quotes.mjs geeft { TICKER: {...} } terug
+    const d    = data[ticker];
 
-    const col   = WL_COLORS[Object.keys(watchlist).length % WL_COLORS.length];
-    const name  = d.name || ticker;
-    const yfSym = ticker; // al in YF formaat
+    if (!d || d.error || !d.price) {
+      throw new Error(d?.error || `${ticker} niet gevonden. Probeer: NVDA, ASML.AS, AKA.BR, IFX.DE`);
+    }
+
+    const col  = WL_COLORS[Object.keys(watchlist).length % WL_COLORS.length];
+    const name = d.name || ticker;
 
     wlData[ticker] = d;
-    await addToWatchlist(ticker, yfSym, name, col, note);
+    watchlist[ticker] = { name, color: col, yf_sym: ticker, note, currency: d.currency === 'EUR' ? '€' : '$', data: {} };
+
+    try {
+      await sbUpsert('watchlist', [{
+        ticker, yf_sym: ticker, name, color: col, note,
+        added_at: new Date().toISOString()
+      }]);
+      localStorage.setItem('watchlist_v1', JSON.stringify(watchlist));
+    } catch(e2) {
+      localStorage.setItem('watchlist_v1', JSON.stringify(watchlist));
+    }
+
+    renderWatchlist();
+    showDbStatus(`✓ ${name} (${ticker}) toegevoegd aan watchlist`, 'green');
+
+    // Fetch nieuws op achtergrond
+    fetchWlNews(ticker).then(() => renderWatchlist()).catch(() => {});
+
   } catch(e) {
     showDbStatus(`❌ ${ticker}: ${e.message}`, 'orange');
   }
