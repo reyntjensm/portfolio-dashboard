@@ -1,254 +1,184 @@
 // netlify/functions/quotes.mjs
-// Definitieve stabiele versie — drie gratis bronnen gecombineerd:
-// - AAPL, GOOGL (US):  Finnhub real-time → Twelve Data EOD als fallback
-// - ACKB, SOF (XBRU):  live.euronext.com scrape (~15min vertraging)
-// - IFX (XETR):        boerse-frankfurt.de scrape (~15min vertraging)
+// Stabiele koersen via:
+// - AAPL/GOOGL: Finnhub (real-time, gratis)
+// - ACKB/SOF/IFX: Stooq.com (gratis, geen key, ~15min vertraging)
+// - Fallback: Twelve Data EOD
 
 const FH_KEY  = 'd81im41r01qrojfbo940d81im41r01qrojfbo94g';
 const TD_KEY  = process.env.TWELVE_DATA_KEY || '';
 const TD_BASE = 'https://api.twelvedata.com';
 
-// ISIN mapping — officiële identificatoren voor Euronext scraping
-const CONFIG = {
-  // Portfolio tickers
-  'AAPL':    { type: 'us',       sym: 'AAPL'  },
-  'GOOGL':   { type: 'us',       sym: 'GOOGL' },
-  'ACKB':    { type: 'euronext', isin: 'BE0003764785', mic: 'XBRU', tdSym: 'AKA:BRU'  },
-  'SOF':     { type: 'euronext', isin: 'BE0003717312', mic: 'XBRU', tdSym: 'SOF:BRU'  },
-  'IFX':     { type: 'xetra',    isin: 'DE0006231004', mic: 'XETR', tdSym: 'IFX:XETR' },
-  // Yahoo-stijl aliassen (voor watchlist)
-  'AKA.BR':  { type: 'euronext', isin: 'BE0003764785', mic: 'XBRU', tdSym: 'AKA:BRU'  },
-  'SOF.BR':  { type: 'euronext', isin: 'BE0003717312', mic: 'XBRU', tdSym: 'SOF:BRU'  },
-  'IFX.DE':  { type: 'xetra',    isin: 'DE0006231004', mic: 'XETR', tdSym: 'IFX:XETR' },
-  'KBC.BR':  { type: 'euronext', isin: 'BE0003565737', mic: 'XBRU', tdSym: 'KBC:BRU'  },
-  'UCB.BR':  { type: 'euronext', isin: 'BE0003739530', mic: 'XBRU', tdSym: 'UCB:BRU'  },
-  'SOLB.BR': { type: 'euronext', isin: 'BE0003470755', mic: 'XBRU', tdSym: 'SOLB:BRU' },
-  'ASML.AS': { type: 'euronext', isin: 'NL0010273215', mic: 'XAMS', tdSym: 'ASML:AMS' },
-  'BAS.DE':  { type: 'xetra',    isin: 'DE000BASF111', mic: 'XETR', tdSym: 'BAS:XETR' },
-  'SAP.DE':  { type: 'xetra',    isin: 'DE0007164600', mic: 'XETR', tdSym: 'SAP:XETR' },
+// Stooq symbolen voor Europese aandelen
+// Stooq gebruikt .br voor Brussel, .de voor XETRA
+const STOOQ_SYM = {
+  'ACKB':    'aka.br',
+  'SOF':     'sof.br',
+  'IFX':     'ifx.de',
+  'AKA.BR':  'aka.br',
+  'SOF.BR':  'sof.br',
+  'IFX.DE':  'ifx.de',
+  'KBC.BR':  'kbc.br',
+  'UCB.BR':  'ucb.br',
+  'ASML.AS': 'asml.nl',
+  'BAS.DE':  'bas.de',
+  'SAP.DE':  'sap.de',
 };
 
-function resolveConfig(sym) {
-  if (CONFIG[sym]) return CONFIG[sym];
-  if (sym.endsWith('.BR')) return { type:'euronext', isin:null, mic:'XBRU', tdSym:sym.replace('.BR',':BRU') };
-  if (sym.endsWith('.DE')) return { type:'xetra',    isin:null, mic:'XETR', tdSym:sym.replace('.DE',':XETR') };
-  if (sym.endsWith('.AS')) return { type:'euronext', isin:null, mic:'XAMS', tdSym:sym.replace('.AS',':AMS') };
-  if (sym.endsWith('.PA')) return { type:'euronext', isin:null, mic:'XPAR', tdSym:sym.replace('.PA',':PAR') };
-  return { type:'us', sym };
-}
+// Twelve Data exchange config voor fallback
+const TD_CONFIG = {
+  'ACKB':    { sym: 'AKA',  exchange: 'Euronext' },
+  'SOF':     { sym: 'SOF',  exchange: 'Euronext' },
+  'IFX':     { sym: 'IFX',  exchange: 'XETR'    },
+  'AKA.BR':  { sym: 'AKA',  exchange: 'Euronext' },
+  'SOF.BR':  { sym: 'SOF',  exchange: 'Euronext' },
+  'IFX.DE':  { sym: 'IFX',  exchange: 'XETR'    },
+  'ASML.AS': { sym: 'ASML', exchange: 'Euronext' },
+  'KBC.BR':  { sym: 'KBC',  exchange: 'Euronext' },
+};
 
-// ── 1. Finnhub — US real-time ─────────────────────────────────────────────────
+// ── Finnhub — US real-time ─────────────────────────────────────────────────────
 async function fetchFinnhub(sym) {
   const r = await fetch(
-    `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${FH_KEY}`,
+    `https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FH_KEY}`,
     { signal: AbortSignal.timeout(8000) }
   );
   if (!r.ok) throw new Error(`Finnhub ${r.status}`);
   const q = await r.json();
   if (!q.c || q.c === 0) throw new Error('Geen Finnhub data');
   return {
-    price:     q.c,
-    chgAbs:    +(q.d  || 0).toFixed(4),
-    chgPct:    +(q.dp || 0).toFixed(4),
-    prevClose: q.pc || q.c,
-    dayHigh:   q.h  || null,
-    dayLow:    q.l  || null,
-    wkHigh:    null, wkLow: null,
-    currency:  'USD',
-    name:      sym,
-    exchange:  'NASDAQ',
-    source:    'Finnhub real-time',
+    price: q.c, currency: 'USD',
+    chgAbs: +(q.d||0).toFixed(4), chgPct: +(q.dp||0).toFixed(4),
+    prevClose: q.pc||q.c, dayHigh: q.h||null, dayLow: q.l||null,
+    wkHigh: null, wkLow: null, name: sym, exchange: 'NASDAQ',
+    source: 'Finnhub real-time',
   };
 }
 
-// ── 2. Twelve Data — EOD fallback voor US + Europese aandelen ─────────────────
-async function fetchTwelveData(tdSym, currency) {
+// ── Stooq — Europese aandelen, CSV endpoint, gratis, ~15min ──────────────────
+async function fetchStooq(stooqSym, currency='EUR') {
+  // Stooq biedt een CSV endpoint dat koersen teruggeeft
+  const url = `https://stooq.com/q/l/?s=${encodeURIComponent(stooqSym)}&f=sd2t2ohlcv&h&e=csv`;
+  const r = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!r.ok) throw new Error(`Stooq HTTP ${r.status}`);
+  const text = await r.text();
+
+  // CSV formaat: Symbol,Date,Time,Open,High,Low,Close,Volume
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) throw new Error('Stooq: geen data');
+  const vals = lines[1].split(',');
+  if (vals.length < 7) throw new Error('Stooq: onvolledig antwoord');
+
+  const price  = parseFloat(vals[6]); // Close
+  const open   = parseFloat(vals[3]);
+  const high   = parseFloat(vals[4]);
+  const low    = parseFloat(vals[5]);
+  const vol    = parseInt(vals[7]||'0');
+
+  if (!price || isNaN(price)) throw new Error('Stooq: ongeldige koers');
+
+  // Dagwijziging tov open (Stooq geeft geen prev close)
+  const chgAbs = price - open;
+  const chgPct = open ? chgAbs / open * 100 : 0;
+
+  return {
+    price, currency,
+    chgAbs: +chgAbs.toFixed(4), chgPct: +chgPct.toFixed(4),
+    prevClose: open, dayHigh: high||null, dayLow: low||null,
+    wkHigh: null, wkLow: null,
+    name: stooqSym.toUpperCase(), exchange: '',
+    source: 'Stooq (~15min vertraging)',
+  };
+}
+
+// ── Twelve Data — EOD fallback ─────────────────────────────────────────────────
+async function fetchTwelveData(sym, exchange, currency='EUR') {
   if (!TD_KEY) throw new Error('Geen Twelve Data key');
-  // /time_series laatste 2 dagen → geeft prijs + dagwijziging
-  const r = await fetch(
-    `${TD_BASE}/time_series?symbol=${encodeURIComponent(tdSym)}&interval=1day&outputsize=2&order=DESC&apikey=${TD_KEY}`,
-    { signal: AbortSignal.timeout(10000) }
-  );
+  const params = new URLSearchParams({
+    symbol: sym, interval: '1day', outputsize: '2',
+    order: 'DESC', apikey: TD_KEY,
+  });
+  if (exchange) params.set('exchange', exchange);
+  const r = await fetch(`${TD_BASE}/time_series?${params}`, { signal: AbortSignal.timeout(10000) });
   if (!r.ok) throw new Error(`Twelve Data ${r.status}`);
   const d = await r.json();
-  if (d.status === 'error') throw new Error(d.message || 'Twelve Data fout');
+  if (d.status === 'error') throw new Error(d.message);
   const vals = d.values || [];
-  if (!vals.length) throw new Error('Geen data');
+  if (!vals.length) throw new Error('Geen Twelve Data data');
 
   const price  = parseFloat(vals[0].close);
   const prev   = vals.length > 1 ? parseFloat(vals[1].close) : price;
   const chgAbs = price - prev;
   const chgPct = prev ? chgAbs / prev * 100 : 0;
-  const cur    = d.meta?.currency || currency || 'EUR';
 
   return {
-    price,
-    chgAbs:  +chgAbs.toFixed(4),
-    chgPct:  +chgPct.toFixed(4),
-    prevClose: prev,
-    dayHigh:  parseFloat(vals[0].high) || null,
-    dayLow:   parseFloat(vals[0].low)  || null,
-    wkHigh:   null, wkLow: null,
-    currency: cur,
-    name:     d.meta?.symbol || tdSym,
-    exchange: d.meta?.exchange || '',
-    source:   'Twelve Data EOD',
+    price, currency: d.meta?.currency || currency,
+    chgAbs: +chgAbs.toFixed(4), chgPct: +chgPct.toFixed(4),
+    prevClose: prev, dayHigh: parseFloat(vals[0].high)||null,
+    dayLow: parseFloat(vals[0].low)||null, wkHigh: null, wkLow: null,
+    name: d.meta?.symbol || sym, exchange: d.meta?.exchange || '',
+    source: 'Twelve Data EOD',
   };
 }
 
-// ── 3. Euronext Live scrape — ~15min vertraging, gratis ──────────────────────
-async function fetchEuronextLive(isin, mic) {
-  if (!isin) throw new Error('Geen ISIN beschikbaar');
-  const url = `https://live.euronext.com/en/pd_es/data/stocks?mics=${mic}&isin=${isin}&belongs_to_pulse=0&from=1&size=1`;
-  const r = await fetch(url, {
-    headers: {
-      'User-Agent':       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-      'Accept':           'application/json, text/javascript, */*; q=0.01',
-      'X-Requested-With': 'XMLHttpRequest',
-      'Referer':          'https://live.euronext.com/',
-      'Accept-Language':  'nl-BE,nl;q=0.9,en;q=0.8',
-    },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!r.ok) throw new Error(`Euronext Live ${r.status}`);
-  const data = await r.json();
-
-  // Probeer beide bekende response-structuren
-  const item = data?.data?.[0] || data?.[0];
-  if (!item) throw new Error('Euronext: lege response');
-
-  // Euronext geeft koers in verschillende velden afhankelijk van market state
-  const price = parseFloat(
-    item.last_price || item.last || item.close_price ||
-    item.bid        || item.ask  || item.reference_price || 0
-  );
-  if (!price || price === 0) throw new Error('Euronext: geen koers in response');
-
-  const chgPct = parseFloat(item.last_price_change_pct || item.pct_change || item.variation || 0);
-  const prev   = chgPct !== 0 ? price / (1 + chgPct / 100) : price;
-  const chgAbs = price - prev;
-
-  return {
-    price,
-    chgAbs:  +chgAbs.toFixed(4),
-    chgPct:  +chgPct.toFixed(4),
-    prevClose: +prev.toFixed(4),
-    dayHigh:  parseFloat(item.high  || item.day_high  || price) || null,
-    dayLow:   parseFloat(item.low   || item.day_low   || price) || null,
-    wkHigh:   parseFloat(item['52w_high']  || item.yearly_high  || 0) || null,
-    wkLow:    parseFloat(item['52w_low']   || item.yearly_low   || 0) || null,
-    currency: 'EUR',
-    name:     item.name || item.instrument_name || isin,
-    exchange: mic,
-    source:   'Euronext Live (~15min vertraging)',
-  };
-}
-
-// ── 4. Deutsche Börse scrape — ~15min vertraging, gratis ─────────────────────
-async function fetchBoerseFrankfurt(isin) {
-  if (!isin) throw new Error('Geen ISIN beschikbaar');
-  const hdrs = {
-    'User-Agent':     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-    'Accept':         'application/json',
-    'Referer':        'https://www.boerse-frankfurt.de/',
-    'Origin':         'https://www.boerse-frankfurt.de',
-    'Accept-Language':'en-US,en;q=0.9',
-  };
-  const r = await fetch(
-    `https://api.boerse-frankfurt.de/v1/data/price_information?isin=${isin}&mic=XETR`,
-    { headers: hdrs, signal: AbortSignal.timeout(10000) }
-  );
-  if (!r.ok) throw new Error(`Boerse Frankfurt ${r.status}`);
-  const d = await r.json();
-
-  const price = parseFloat(d.lastPrice || d.close || d.currentPrice || 0);
-  if (!price) throw new Error('Boerse Frankfurt: geen koers');
-  const prev   = parseFloat(d.previousClose || d.referencePrice || price);
-  const chgAbs = price - prev;
-  const chgPct = prev ? chgAbs / prev * 100 : 0;
-
-  return {
-    price,
-    chgAbs:  +chgAbs.toFixed(4),
-    chgPct:  +chgPct.toFixed(4),
-    prevClose: prev,
-    dayHigh:  parseFloat(d.highPrice    || d.high  || price) || null,
-    dayLow:   parseFloat(d.lowPrice     || d.low   || price) || null,
-    wkHigh:   parseFloat(d['52WeekHigh']|| 0) || null,
-    wkLow:    parseFloat(d['52WeekLow'] || 0) || null,
-    currency: 'EUR',
-    name:     d.name || isin,
-    exchange: 'XETR',
-    source:   'Boerse Frankfurt (~15min vertraging)',
-  };
-}
-
-// ── Finale resultaatverwerking ────────────────────────────────────────────────
+// ── Finale resultaatverwerking ─────────────────────────────────────────────────
 function finalize(raw) {
   return {
     ...raw,
+    mktCap: null, pe: null,
     targetLow: null, targetMean: null, targetHigh: null,
     numAnalysts: null, recKey: null,
     strongBuy: 0, buy: 0, hold: 0, sell: 0, strongSell: 0,
-    mktCap: null, pe: null,
   };
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode:200, headers:{'Access-Control-Allow-Origin':'*'}, body:'' };
+    return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: '' };
   }
 
   const symbols = (event.queryStringParameters?.symbols || '')
     .split(',').map(s => s.trim()).filter(Boolean);
   if (!symbols.length) {
-    return { statusCode:400, body: JSON.stringify({error:'Geen symbolen'}) };
+    return { statusCode: 400, body: JSON.stringify({ error: 'Geen symbolen' }) };
   }
 
   const results = {};
 
   await Promise.allSettled(symbols.map(async sym => {
-    const cfg = resolveConfig(sym);
-
     try {
-      if (cfg.type === 'us') {
-        // US: Finnhub → Twelve Data fallback
+      const stooqSym = STOOQ_SYM[sym];
+      const tdCfg    = TD_CONFIG[sym];
+      const isEU     = !!(stooqSym || tdCfg);
+
+      if (!isEU) {
+        // US stock — Finnhub primair, Twelve Data fallback
         try {
-          results[sym] = finalize(await fetchFinnhub(cfg.sym || sym));
-          console.log(`✓ Finnhub ${sym}: €${results[sym].price}`);
+          results[sym] = finalize(await fetchFinnhub(sym));
+          console.log(`✓ Finnhub ${sym}: $${results[sym].price}`);
         } catch(e1) {
-          console.warn(`Finnhub ${sym} mislukt (${e1.message}), probeer Twelve Data...`);
-          const tdSym = `${cfg.sym || sym}:NASDAQ`;
-          results[sym] = finalize(await fetchTwelveData(cfg.sym || sym, 'USD'));
+          console.warn(`Finnhub ${sym} mislukt: ${e1.message}`);
+          results[sym] = finalize(await fetchTwelveData(sym, null, 'USD'));
           console.log(`✓ TwelveData ${sym}: $${results[sym].price}`);
         }
-
-      } else if (cfg.type === 'euronext') {
-        // Euronext: live.euronext.com → Twelve Data EOD fallback
+      } else {
+        // Europees aandeel — Stooq primair, Twelve Data EOD fallback
         try {
-          results[sym] = finalize(await fetchEuronextLive(cfg.isin, cfg.mic));
-          console.log(`✓ Euronext ${sym}: €${results[sym].price} (${results[sym].source})`);
+          if (!stooqSym) throw new Error('Geen Stooq symbool');
+          results[sym] = finalize(await fetchStooq(stooqSym, 'EUR'));
+          console.log(`✓ Stooq ${sym}: €${results[sym].price}`);
         } catch(e1) {
-          console.warn(`Euronext Live ${sym} mislukt (${e1.message}), probeer Twelve Data...`);
-          results[sym] = finalize(await fetchTwelveData(cfg.tdSym, 'EUR'));
-          console.log(`✓ TwelveData EOD ${sym}: €${results[sym].price}`);
-        }
-
-      } else if (cfg.type === 'xetra') {
-        // XETRA: boerse-frankfurt.de → Twelve Data EOD fallback
-        try {
-          results[sym] = finalize(await fetchBoerseFrankfurt(cfg.isin));
-          console.log(`✓ Boerse Frankfurt ${sym}: €${results[sym].price}`);
-        } catch(e1) {
-          console.warn(`Boerse Frankfurt ${sym} mislukt (${e1.message}), probeer Twelve Data...`);
-          results[sym] = finalize(await fetchTwelveData(cfg.tdSym, 'EUR'));
+          console.warn(`Stooq ${sym} mislukt: ${e1.message}`);
+          if (!tdCfg) throw new Error(`Geen fallback configuratie voor ${sym}`);
+          results[sym] = finalize(await fetchTwelveData(tdCfg.sym, tdCfg.exchange, 'EUR'));
           console.log(`✓ TwelveData EOD ${sym}: €${results[sym].price}`);
         }
       }
-
     } catch(e) {
-      results[sym] = { error: `${e.message}` };
+      results[sym] = { error: e.message };
       console.error(`✗ ${sym}: ${e.message}`);
     }
   }));
