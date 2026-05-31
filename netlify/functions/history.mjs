@@ -1,152 +1,144 @@
 // netlify/functions/history.mjs
-// Alpha Vantage TIME_SERIES voor grafieken (EU stocks)
-// + Twelve Data voor US stocks
+// Historische koersen via Alpha Vantage (EU) en Twelve Data (US)
 
-const AV_KEY  = process.env.ALPHA_VANTAGE_KEY || 'YV7LYG7RHI1SPAS6';
-const TD_KEY  = process.env.TWELVE_DATA_KEY   || '';
+const AV_KEY = process.env.ALPHA_VANTAGE_KEY || 'YV7LYG7RHI1SPAS6';
+const TD_KEY = process.env.TWELVE_DATA_KEY   || '';
 const AV_BASE = 'https://www.alphavantage.co/query';
 const TD_BASE = 'https://api.twelvedata.com';
 
+// Symbool mapping
 const AV_SYM = {
-  'ACKB': 'AKA.BRU', 'SOF': 'SOF.BRU', 'IFX': 'IFX.DEX',
-  'AKA.BR': 'AKA.BRU', 'SOF.BR': 'SOF.BRU', 'IFX.DE': 'IFX.DEX',
-  'KBC.BR': 'KBC.BRU', 'UCB.BR': 'UCB.BRU', 'ASML.AS': 'ASML.AMS',
+  ACKB:'AKA.BRU', SOF:'SOF.BRU', IFX:'IFX.DEX',
+  'AKA.BR':'AKA.BRU', 'SOF.BR':'SOF.BRU', 'IFX.DE':'IFX.DEX',
+  'KBC.BR':'KBC.BRU', 'UCB.BR':'UCB.BRU', 'ASML.AS':'ASML.AMS',
+};
+const TD_US = { AAPL:'AAPL', GOOGL:'GOOGL', NVDA:'NVDA', MSFT:'MSFT', AMZN:'AMZN' };
+
+// Alpha Vantage function + cutoff per periode
+const AV_CFG = {
+  '15M': { func:'TIME_SERIES_INTRADAY', interval:'15min', outputsize:'compact', days:1   },
+  '1U':  { func:'TIME_SERIES_INTRADAY', interval:'60min', outputsize:'full',    days:5   },
+  '1M':  { func:'TIME_SERIES_DAILY',    outputsize:'compact',                   days:30  },
+  '3M':  { func:'TIME_SERIES_DAILY',    outputsize:'full',                      days:90  },
+  '6M':  { func:'TIME_SERIES_DAILY',    outputsize:'full',                      days:180 },
+  '1J':  { func:'TIME_SERIES_DAILY',    outputsize:'full',                      days:365 },
+  '2J':  { func:'TIME_SERIES_WEEKLY',   outputsize:'full',                      days:730 },
+  '5J':  { func:'TIME_SERIES_WEEKLY',   outputsize:'full',                      days:1825},
+  'MAX': { func:'TIME_SERIES_MONTHLY',  outputsize:'full',                      days:9999},
 };
 
-const TD_US = { 'AAPL': 'AAPL', 'GOOGL': 'GOOGL', 'NVDA': 'NVDA', 'MSFT': 'MSFT' };
-
-// AV function per periode
-function getAVParams(period) {
-  switch(period) {
-    case '15M': return { func: 'TIME_SERIES_INTRADAY', interval: '15min', slices: 2 };
-    case '1U':  return { func: 'TIME_SERIES_INTRADAY', interval: '60min', slices: 5 };
-    case '1M':  return { func: 'TIME_SERIES_DAILY',    compact: false };
-    case '3M':  return { func: 'TIME_SERIES_DAILY',    compact: false };
-    case '6M':  return { func: 'TIME_SERIES_DAILY',    compact: false };
-    case '1J':  return { func: 'TIME_SERIES_DAILY',    compact: false };
-    case '2J':  return { func: 'TIME_SERIES_WEEKLY' };
-    case '5J':  return { func: 'TIME_SERIES_WEEKLY' };
-    case 'MAX': return { func: 'TIME_SERIES_MONTHLY' };
-    default:    return { func: 'TIME_SERIES_DAILY',    compact: false };
-  }
-}
-
-const PERIOD_DAYS = {
-  '15M':1, '1U':5, '1M':30, '3M':90, '6M':180,
-  '1J':365, '2J':730, '5J':1825, 'MAX':9999
+const TD_CFG = {
+  '15M': { interval:'15min', outputsize:96   },
+  '1U':  { interval:'1h',    outputsize:120  },
+  '1M':  { interval:'1day',  outputsize:30   },
+  '3M':  { interval:'1day',  outputsize:90   },
+  '6M':  { interval:'1day',  outputsize:180  },
+  '1J':  { interval:'1day',  outputsize:365  },
+  '2J':  { interval:'1week', outputsize:104  },
+  '5J':  { interval:'1week', outputsize:260  },
+  'MAX': { interval:'1month',outputsize:120  },
 };
 
-async function fetchAVHistory(avSym, period) {
-  // AV_KEY ingebakken als fallback
-  const { func, interval, compact } = getAVParams(period);
+async function fromAV(avSym, period) {
+  const cfg = AV_CFG[period] || AV_CFG['1J'];
   const params = new URLSearchParams({
-    function: func, symbol: avSym, apikey: AV_KEY,
-    outputsize: compact === false ? 'full' : 'compact',
+    function:   cfg.func,
+    symbol:     avSym,
+    outputsize: cfg.outputsize || 'full',
+    apikey:     AV_KEY,
   });
-  if (interval) params.set('interval', interval);
+  if (cfg.interval) params.set('interval', cfg.interval);
 
-  const r = await fetch(`${AV_BASE}?${params}`, { signal: AbortSignal.timeout(15000) });
+  const r = await fetch(`${AV_BASE}?${params}`, { signal: AbortSignal.timeout(20000) });
   if (!r.ok) throw new Error(`AV HTTP ${r.status}`);
   const data = await r.json();
-  if (data.Note || data.Information) throw new Error('Alpha Vantage rate limit');
+  if (data.Note || data.Information) throw new Error('Alpha Vantage rate limit bereikt');
 
-  // Vind de time series key
-  const key = Object.keys(data).find(k => k.includes('Time Series'));
-  if (!key) throw new Error(`Geen AV time series data voor ${avSym}`);
+  const key = Object.keys(data).find(k => k.startsWith('Time Series'));
+  if (!key) throw new Error(`Geen data van Alpha Vantage voor ${avSym}`);
 
-  const series = data[key];
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - (PERIOD_DAYS[period] || 365));
-
-  const candles = Object.entries(series)
-    .filter(([date]) => new Date(date) >= cutoff)
-    .sort(([a], [b]) => new Date(a) - new Date(b))
-    .map(([date, v]) => ({
-      t: new Date(date).getTime(),
+  const cutoff = new Date(Date.now() - cfg.days * 864e5);
+  return Object.entries(data[key])
+    .map(([dt, v]) => ({
+      t: new Date(dt).getTime(),
       o: parseFloat(v['1. open']),
       h: parseFloat(v['2. high']),
       l: parseFloat(v['3. low']),
       c: parseFloat(v['4. close']),
       v: parseInt(v['5. volume'] || '0'),
     }))
-    .filter(c => !isNaN(c.c) && c.c > 0);
-
-  return candles;
+    .filter(c => !isNaN(c.c) && c.c > 0 && new Date(c.t) >= cutoff)
+    .sort((a, b) => a.t - b.t);
 }
 
-async function fetchTDHistory(sym, period) {
+async function fromTD(sym, period) {
   if (!TD_KEY) throw new Error('Geen Twelve Data key');
-  const MAP = {
-    '15M':{interval:'15min',outputsize:96},
-    '1U': {interval:'1h',   outputsize:120},
-    '1M': {interval:'1day', outputsize:30},
-    '3M': {interval:'1day', outputsize:90},
-    '6M': {interval:'1day', outputsize:180},
-    '1J': {interval:'1day', outputsize:365},
-    '2J': {interval:'1week',outputsize:104},
-    '5J': {interval:'1week',outputsize:260},
-    'MAX':{interval:'1month',outputsize:120},
-  };
-  const { interval, outputsize } = MAP[period] || MAP['1J'];
-  const r = await fetch(
-    `${TD_BASE}/time_series?symbol=${sym}&interval=${interval}&outputsize=${outputsize}&order=ASC&apikey=${TD_KEY}`,
-    { signal: AbortSignal.timeout(15000) }
+  const cfg = TD_CFG[period] || TD_CFG['1J'];
+  const r   = await fetch(
+    `${TD_BASE}/time_series?symbol=${sym}&interval=${cfg.interval}&outputsize=${cfg.outputsize}&order=ASC&apikey=${TD_KEY}`,
+    { signal: AbortSignal.timeout(20000) }
   );
-  if (!r.ok) throw new Error(`Twelve Data HTTP ${r.status}`);
+  if (!r.ok) throw new Error(`TD HTTP ${r.status}`);
   const d = await r.json();
-  if (d.status === 'error') throw new Error(d.message);
-  return (d.values || []).map(v => ({
-    t: new Date(v.datetime + 'Z').getTime(),
-    o: parseFloat(v.open), h: parseFloat(v.high),
-    l: parseFloat(v.low),  c: parseFloat(v.close),
-    v: parseInt(v.volume || '0'),
-  })).filter(c => !isNaN(c.c) && c.c > 0);
+  if (d.status === 'error') throw new Error(d.message || 'Twelve Data fout');
+  return (d.values || [])
+    .map(v => ({
+      t: new Date(v.datetime + 'Z').getTime(),
+      o: parseFloat(v.open), h: parseFloat(v.high),
+      l: parseFloat(v.low),  c: parseFloat(v.close),
+      v: parseInt(v.volume || '0'),
+    }))
+    .filter(c => !isNaN(c.c) && c.c > 0);
 }
 
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: '' };
+    return { statusCode:200, headers:{'Access-Control-Allow-Origin':'*'}, body:'' };
   }
 
-  const rawSym = event.queryStringParameters?.symbol || '';
+  const sym    = event.queryStringParameters?.symbol || '';
   const period = event.queryStringParameters?.period || '1J';
-  if (!rawSym) return { statusCode: 400, body: JSON.stringify({ error: 'Geen symbool' }) };
+  if (!sym) return { statusCode:400, body: JSON.stringify({error:'Geen symbool'}) };
 
-  const avSym = AV_SYM[rawSym];
-  const tdSym = TD_US[rawSym];
+  const avSym = AV_SYM[sym];
+  const tdSym = TD_US[sym];
 
   try {
-    let candles;
-    let currency = 'EUR';
+    let candles, currency;
 
     if (avSym) {
-      candles  = await fetchAVHistory(avSym, period);
-      currency = avSym.includes('.BRU') || avSym.includes('.DEX') || avSym.includes('.AMS') ? 'EUR' : 'USD';
-      console.log(`✓ AV history ${rawSym}: ${candles.length} candles`);
-    } else if (tdSym) {
-      candles  = await fetchTDHistory(tdSym, period);
+      candles  = await fromAV(avSym, period);
+      currency = 'EUR';
+      console.log(`✓ AV history ${sym}(${avSym}): ${candles.length} candles`);
+    } else if (tdSym && TD_KEY) {
+      candles  = await fromTD(tdSym, period);
       currency = 'USD';
-      console.log(`✓ TD history ${rawSym}: ${candles.length} candles`);
+      console.log(`✓ TD history ${sym}: ${candles.length} candles`);
+    } else if (tdSym) {
+      // Fallback: AV voor US ook
+      candles  = await fromAV(tdSym, period);
+      currency = 'USD';
+      console.log(`✓ AV history US ${sym}: ${candles.length} candles`);
     } else {
-      // Probeer Alpha Vantage met het ruwe symbool
-      candles  = await fetchAVHistory(rawSym, period);
-      currency = rawSym.endsWith('.BR') || rawSym.endsWith('.DE') ? 'EUR' : 'USD';
+      throw new Error(`Geen configuratie voor symbool: ${sym}`);
     }
 
+    if (!candles.length) throw new Error('Geen historische candles gevonden');
+
     return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=300',
+      statusCode:200,
+      headers:{
+        'Content-Type':'application/json',
+        'Access-Control-Allow-Origin':'*',
+        'Cache-Control':'public, max-age=300',
       },
-      body: JSON.stringify({ symbol: rawSym, currency, candles }),
+      body: JSON.stringify({ symbol:sym, currency, candles }),
     };
   } catch(e) {
-    console.error(`History error ${rawSym}: ${e.message}`);
+    console.error(`History error ${sym}: ${e.message}`);
     return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      statusCode:500,
+      headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'},
       body: JSON.stringify({ error: e.message }),
     };
   }
