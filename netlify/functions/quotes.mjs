@@ -1,162 +1,154 @@
 // netlify/functions/quotes.mjs
-// Koersen via Yahoo Finance (serverside — geen CORS probleem)
-// + Finnhub als extra voor US stocks
+// Alpha Vantage (officieel gelicenseerd, gratis tier: 25 calls/dag)
+// + Finnhub voor US stocks (real-time, gratis)
+// Alpha Vantage key: stel in als ALPHA_VANTAGE_KEY environment variable in Netlify
 
-const FH_KEY = 'd81im41r01qrojfbo940d81im41r01qrojfbo94g';
+const AV_KEY  = process.env.ALPHA_VANTAGE_KEY || 'YV7LYG7RHI1SPAS6';
+const FH_KEY  = 'd81im41r01qrojfbo940d81im41r01qrojfbo94g';
+const AV_BASE = 'https://www.alphavantage.co/query';
 
-// Yahoo Finance symbolen per portfolio ticker
-const YF_SYM = {
+// Alpha Vantage symboolformaat
+const AV_SYM = {
   'AAPL':  'AAPL',
   'GOOGL': 'GOOGL',
-  'ACKB':  'AKA.BR',
-  'SOF':   'SOF.BR',
-  'IFX':   'IFX.DE',
+  'ACKB':  'AKA.BRU',   // Euronext Brussels
+  'SOF':   'SOF.BRU',   // Euronext Brussels
+  'IFX':   'IFX.DEX',   // XETRA
+  // Watchlist aliassen
+  'AKA.BR':  'AKA.BRU',
+  'SOF.BR':  'SOF.BRU',
+  'IFX.DE':  'IFX.DEX',
+  'KBC.BR':  'KBC.BRU',
+  'UCB.BR':  'UCB.BRU',
+  'ASML.AS': 'ASML.AMS',
 };
 
-function resolveYF(sym) {
-  if (YF_SYM[sym]) return YF_SYM[sym];
-  // Al in Yahoo formaat (watchlist)
+function resolveAV(sym) {
+  if (AV_SYM[sym]) return AV_SYM[sym];
+  // Auto-detectie
+  if (sym.endsWith('.BR')) return sym.replace('.BR', '.BRU');
+  if (sym.endsWith('.DE')) return sym.replace('.DE', '.DEX');
+  if (sym.endsWith('.AS')) return sym.replace('.AS', '.AMS');
+  if (sym.endsWith('.PA')) return sym.replace('.PA', '.PAR');
   return sym;
 }
 
-async function getYahooCookie() {
-  try {
-    const r = await fetch('https://fc.yahoo.com', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-      signal: AbortSignal.timeout(5000),
-    });
-    const sc = r.headers.get('set-cookie') || '';
-    const m  = sc.match(/A1=([^;]+)/);
-    if (m) return `A1=${m[1]}`;
-  } catch(e) {}
-  // Fallback
-  try {
-    const r = await fetch('https://finance.yahoo.com/', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-      signal: AbortSignal.timeout(5000),
-    });
-    const sc = r.headers.get('set-cookie') || '';
-    const m  = sc.match(/A1=([^;]+)/);
-    if (m) return `A1=${m[1]}`;
-  } catch(e) {}
-  return '';
-}
+async function fetchAV(avSym) {
+  // AV_KEY ingebakken als fallback
+  const url = `${AV_BASE}?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(avSym)}&apikey=${AV_KEY}`;
+  const r   = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!r.ok) throw new Error(`Alpha Vantage HTTP ${r.status}`);
+  const data = await r.json();
 
-async function fetchYahoo(yfSym, cookie) {
-  const hdrs = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept': 'application/json',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Referer': 'https://finance.yahoo.com/',
-  };
-  if (cookie) hdrs['Cookie'] = cookie;
-
-  // Probeer v8 chart endpoint — meest betrouwbaar, werkt voor EU aandelen
-  for (const host of ['query1', 'query2']) {
-    try {
-      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yfSym)}?interval=1d&range=1d&includePrePost=false`;
-      const r   = await fetch(url, { headers: hdrs, signal: AbortSignal.timeout(8000) });
-      if (!r.ok) continue;
-      const data = await r.json();
-      const meta = data?.chart?.result?.[0]?.meta;
-      if (meta?.regularMarketPrice) {
-        const price    = meta.regularMarketPrice;
-        const prev     = meta.chartPreviousClose || meta.previousClose || price;
-        const chgAbs   = price - prev;
-        const chgPct   = prev ? (chgAbs / prev * 100) : 0;
-        const currency = meta.currency || (yfSym.endsWith('.BR') || yfSym.endsWith('.DE') ? 'EUR' : 'USD');
-        return {
-          price, currency,
-          chgAbs: +chgAbs.toFixed(4),
-          chgPct: +chgPct.toFixed(4),
-          prevClose: prev,
-          dayHigh:   meta.regularMarketDayHigh  || null,
-          dayLow:    meta.regularMarketDayLow   || null,
-          wkHigh:    meta.fiftyTwoWeekHigh      || null,
-          wkLow:     meta.fiftyTwoWeekLow       || null,
-          name:      meta.shortName || meta.symbol || yfSym,
-          exchange:  meta.exchangeName || '',
-          mktCap: null, pe: null,
-          targetLow: null, targetMean: null, targetHigh: null,
-          numAnalysts: null, recKey: null,
-          strongBuy:0, buy:0, hold:0, sell:0, strongSell:0,
-        };
-      }
-    } catch(e) { console.warn(`Yahoo ${host} ${yfSym}:`, e.message); }
+  // Check voor rate limit
+  if (data.Note || data.Information) {
+    throw new Error('Alpha Vantage rate limit bereikt (25 calls/dag op gratis tier)');
   }
-  throw new Error(`Yahoo Finance geeft geen data voor ${yfSym}`);
+
+  const q = data['Global Quote'];
+  if (!q || !q['05. price']) throw new Error(`Geen Alpha Vantage data voor ${avSym}`);
+
+  const price    = parseFloat(q['05. price']);
+  const prev     = parseFloat(q['08. previous close']);
+  const chgAbs   = parseFloat(q['09. change']);
+  const chgPct   = parseFloat(q['10. change percent'].replace('%', ''));
+  const dayHigh  = parseFloat(q['03. high']);
+  const dayLow   = parseFloat(q['04. low']);
+  const volume   = parseInt(q['06. volume']);
+
+  const isEU = avSym.includes('.BRU') || avSym.includes('.DEX') || avSym.includes('.AMS');
+
+  return {
+    price, currency: isEU ? 'EUR' : 'USD',
+    chgAbs: +chgAbs.toFixed(4),
+    chgPct: +chgPct.toFixed(4),
+    prevClose: prev,
+    dayHigh: dayHigh || null,
+    dayLow:  dayLow  || null,
+    wkHigh: null, wkLow: null,
+    name:     avSym,
+    exchange: isEU ? avSym.split('.').pop() : 'NASDAQ',
+    mktCap: null, pe: null,
+    targetLow: null, targetMean: null, targetHigh: null,
+    numAnalysts: null, recKey: null,
+    strongBuy: 0, buy: 0, hold: 0, sell: 0, strongSell: 0,
+  };
 }
 
 async function fetchFinnhub(sym) {
   const r = await fetch(
     `https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FH_KEY}`,
-    { signal: AbortSignal.timeout(6000) }
+    { signal: AbortSignal.timeout(8000) }
   );
-  if (!r.ok) throw new Error(`Finnhub ${r.status}`);
+  if (!r.ok) throw new Error(`Finnhub HTTP ${r.status}`);
   const q = await r.json();
   if (!q.c || q.c === 0) throw new Error('Geen Finnhub data');
   return {
     price: q.c, currency: 'USD',
     chgAbs: +(q.d||0).toFixed(4),
     chgPct: +(q.dp||0).toFixed(4),
-    prevClose: q.pc||q.c,
-    dayHigh: q.h||null, dayLow: q.l||null,
+    prevClose: q.pc || q.c,
+    dayHigh: q.h || null, dayLow: q.l || null,
     wkHigh: null, wkLow: null,
     name: sym, exchange: 'NASDAQ',
     mktCap: null, pe: null,
     targetLow: null, targetMean: null, targetHigh: null,
     numAnalysts: null, recKey: null,
-    strongBuy:0, buy:0, hold:0, sell:0, strongSell:0,
+    strongBuy: 0, buy: 0, hold: 0, sell: 0, strongSell: 0,
   };
 }
 
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode:200, headers:{'Access-Control-Allow-Origin':'*'}, body:'' };
+    return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: '' };
   }
 
   const symbols = (event.queryStringParameters?.symbols || '')
     .split(',').map(s => s.trim()).filter(Boolean);
   if (!symbols.length) {
-    return { statusCode:400, body: JSON.stringify({error:'Geen symbolen'}) };
+    return { statusCode: 400, body: JSON.stringify({ error: 'Geen symbolen' }) };
   }
 
-  // Haal cookie eenmalig op
-  const cookie  = await getYahooCookie();
   const results = {};
 
-  await Promise.allSettled(symbols.map(async orig => {
-    const yfSym = resolveYF(orig);
-    const isEU  = yfSym.endsWith('.BR') || yfSym.endsWith('.DE') || yfSym.endsWith('.AS') || yfSym.endsWith('.PA');
+  // Verwerk sequentieel om rate limit te respecteren (5 calls/min)
+  for (const orig of symbols) {
+    const avSym = resolveAV(orig);
+    const isEU  = avSym.includes('.BRU') || avSym.includes('.DEX') || avSym.includes('.AMS');
 
     try {
       if (!isEU) {
-        // US: Finnhub primair (real-time), Yahoo als fallback
+        // US stocks: Finnhub primair (real-time), Alpha Vantage als fallback
         try {
           results[orig] = await fetchFinnhub(orig);
           console.log(`✓ Finnhub ${orig}: $${results[orig].price}`);
         } catch(e1) {
-          console.warn(`Finnhub ${orig} mislukt: ${e1.message}`);
-          results[orig] = await fetchYahoo(yfSym, cookie);
-          console.log(`✓ Yahoo ${orig}: $${results[orig].price}`);
+          console.warn(`Finnhub mislukt voor ${orig}: ${e1.message}`);
+          results[orig] = await fetchAV(avSym);
+          console.log(`✓ AV ${orig}: $${results[orig].price}`);
         }
       } else {
-        // Europees: Yahoo Finance serverside (geen CORS)
-        results[orig] = await fetchYahoo(yfSym, cookie);
-        console.log(`✓ Yahoo ${orig}: €${results[orig].price}`);
+        // Europese stocks: Alpha Vantage (officieel gelicenseerd voor EU)
+        results[orig] = await fetchAV(avSym);
+        console.log(`✓ AV ${orig}: €${results[orig].price}`);
       }
     } catch(e) {
       results[orig] = { error: e.message };
-      console.error(`✗ ${orig} (${yfSym}): ${e.message}`);
+      console.error(`✗ ${orig} (${avSym}): ${e.message}`);
     }
-  }));
+
+    // Kleine pauze tussen calls om rate limit te vermijden
+    if (symbols.indexOf(orig) < symbols.length - 1) {
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }
 
   return {
     statusCode: 200,
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=60',
+      'Cache-Control': 'public, max-age=300',
     },
     body: JSON.stringify(results),
   };
