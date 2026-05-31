@@ -1758,43 +1758,142 @@ const newsCache = {};
 // Analisten data cache
 const analystCache = {};
 
+// Finnhub ticker mapping voor Belgische aandelen
+const FH_ANALYST_SYM = {
+  ACKB:'AKA', SOF:'SOF', IFX:'IFX',
+  AAPL:'AAPL', GOOGL:'GOOGL', NVDA:'NVDA', MSFT:'MSFT',
+};
+
+// Alpha Vantage ticker voor company overview
+const AV_OVERVIEW_SYM = {
+  ACKB:'AKA.BRU', SOF:'SOF.BRU', IFX:'IFX.DEX',
+  AAPL:'AAPL', GOOGL:'GOOGL',
+};
+
 async function fetchAnalystData(ticker) {
   if (analystCache[ticker]) return analystCache[ticker];
-  try {
-    const r = await fetch(
-      `https://finnhub.io/api/v1/stock/recommendation?symbol=${ticker}&token=${FH_KEY_CLIENT}`,
-      { signal: AbortSignal.timeout(15000) }
-    );
-    if (!r.ok) return null;
-    const data = await r.json();
-    analystCache[ticker] = data;
 
-    // Patch STOCKS met analisten data
-    const s = STOCKS[ticker];
-    if (s && data.analystSummary) {
-      const as = data.analystSummary;
-      if (as.buy  !== undefined) s.analysts.buy  = as.buy;
-      if (as.hold !== undefined) s.analysts.hold = as.hold;
-      if (as.sell !== undefined) s.analysts.sell = as.sell;
-      if (as.total)     s.analysts.total     = as.total;
-      if (as.consensus) s.analysts.consensus = as.consensus;
-      if (as.avgTarget) s.analysts.avgTarget = as.avgTarget;
-    }
-    if (s && data.overview) {
-      const ov = data.overview;
-      if (ov.pe)         s.ratios['P/E (TTM)']  = ov.pe + '×';
-      if (ov.forwardPE)  s.ratios['P/E Fwd']    = ov.forwardPE + '×';
-      if (ov.beta)       s.ratios['Beta']        = '' + ov.beta;
-      if (ov.divYield)   s.ratios['Div. Yield']  = ov.divYield + '%';
-      if (ov.roe)        s.ratios['ROE']         = ov.roe + '%';
-      if (ov.week52High) s.wkH = ov.week52High;
-      if (ov.week52Low)  s.wkL = ov.week52Low;
-    }
-    return data;
-  } catch(e) {
-    console.warn(`Analyst data mislukt voor ${ticker}:`, e.message);
-    return null;
+  const fhSym = FH_ANALYST_SYM[ticker] || ticker.split('.')[0];
+  const avSym = AV_OVERVIEW_SYM[ticker] || ticker;
+
+  // Parallel: Finnhub recommendations + upgrades + Alpha Vantage overview
+  const [recData, upgradeData, overviewData] = await Promise.all([
+    // Finnhub aanbevelingen
+    fetch(`https://finnhub.io/api/v1/stock/recommendation?symbol=${fhSym}&token=${FH_KEY_CLIENT}`,
+      { signal: AbortSignal.timeout(8000) })
+      .then(r => r.ok ? r.json() : []).catch(() => []),
+
+    // Finnhub upgrades/downgrades
+    fetch(`https://finnhub.io/api/v1/stock/upgrade-downgrade?symbol=${fhSym}&token=${FH_KEY_CLIENT}`,
+      { signal: AbortSignal.timeout(8000) })
+      .then(r => r.ok ? r.json() : []).catch(() => []),
+
+    // Alpha Vantage overview (PE, beta, koersdoel, ...)
+    fetch(`https://www.alphavantage.co/query?function=OVERVIEW&symbol=${encodeURIComponent(avSym)}&apikey=${AV_KEY_CLIENT}`,
+      { signal: AbortSignal.timeout(10000) })
+      .then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+
+  // Verwerk Finnhub recommendations
+  let analystSummary = null;
+  const rec = Array.isArray(recData) ? recData : [];
+  if (rec.length > 0) {
+    const r0   = rec[0];
+    const buy  = (r0.strongBuy||0) + (r0.buy||0);
+    const hold = r0.hold||0;
+    const sell = (r0.strongSell||0) + (r0.sell||0);
+    const total = buy + hold + sell || 1;
+    analystSummary = {
+      buy, hold, sell, total,
+      strongBuy: r0.strongBuy||0, strongSell: r0.strongSell||0,
+      consensus: buy/total > 0.6  ? 'Sterk Kopen'
+               : buy/total > 0.4  ? 'Kopen'
+               : sell/total > 0.4 ? 'Verkopen'
+               :                    'Houden',
+      avgTarget:  null, highTarget: null, lowTarget: null,
+    };
   }
+
+  // Verwerk Alpha Vantage overview
+  let overview = null;
+  if (overviewData && overviewData.Symbol && !overviewData.Note && !overviewData.Information) {
+    const d = overviewData;
+    const buy  = parseInt(d.AnalystRatingStrongBuy||'0') + parseInt(d.AnalystRatingBuy||'0');
+    const hold = parseInt(d.AnalystRatingHold||'0');
+    const sell = parseInt(d.AnalystRatingSell||'0') + parseInt(d.AnalystRatingStrongSell||'0');
+    const total = buy + hold + sell;
+
+    overview = {
+      pe:        d.PERatio       ? +parseFloat(d.PERatio).toFixed(1)                    : null,
+      forwardPE: d.ForwardPE     ? +parseFloat(d.ForwardPE).toFixed(1)                  : null,
+      beta:      d.Beta          ? +parseFloat(d.Beta).toFixed(2)                        : null,
+      divYield:  d.DividendYield ? +(parseFloat(d.DividendYield)*100).toFixed(2)         : null,
+      roe:       d.ReturnOnEquityTTM ? +(parseFloat(d.ReturnOnEquityTTM)*100).toFixed(1) : null,
+      targetPrice: d.AnalystTargetPrice ? parseFloat(d.AnalystTargetPrice) : null,
+      week52High: d['52WeekHigh'] ? parseFloat(d['52WeekHigh']) : null,
+      week52Low:  d['52WeekLow']  ? parseFloat(d['52WeekLow'])  : null,
+    };
+
+    // AV heeft betere analisten data
+    if (total > 0) {
+      analystSummary = {
+        buy, hold, sell, total,
+        strongBuy: parseInt(d.AnalystRatingStrongBuy||'0'),
+        strongSell: parseInt(d.AnalystRatingStrongSell||'0'),
+        consensus: buy/total > 0.6  ? 'Sterk Kopen'
+                 : buy/total > 0.4  ? 'Kopen'
+                 : sell/total > 0.4 ? 'Verkopen'
+                 :                    'Houden',
+        avgTarget: overview.targetPrice ? Math.round(overview.targetPrice) : null,
+        highTarget: null, lowTarget: null,
+      };
+    } else if (overview.targetPrice && analystSummary) {
+      analystSummary.avgTarget = Math.round(overview.targetPrice);
+    }
+  }
+
+  // Upgrades/downgrades verwerken
+  const upgrades = (Array.isArray(upgradeData) ? upgradeData : [])
+    .sort((a,b) => new Date(b.gradeDate) - new Date(a.gradeDate))
+    .slice(0, 10)
+    .map(u => ({
+      gradeDate: u.gradeDate, firm: u.company, action: u.action,
+      fromGrade: u.fromGrade, toGrade: u.toGrade,
+      actionNl:  u.action==='upgrade'   ? '↑ Upgrade'
+               : u.action==='downgrade' ? '↓ Downgrade'
+               : u.action==='initiated' ? '★ Initiatie'
+               : u.action==='reiterated'? '→ Herhaald'
+               :                          '→ Bevestigd',
+      sentiment: u.action==='upgrade'||u.action==='initiated' ? 'positive'
+               : u.action==='downgrade' ? 'negative' : 'neutral',
+    }));
+
+  const result = { analystSummary, overview, upgrades, recommendations: rec };
+  analystCache[ticker] = result;
+
+  // Patch STOCKS direct
+  const s = STOCKS[ticker];
+  if (s) {
+    if (analystSummary) {
+      if (analystSummary.buy   !== undefined) s.analysts.buy       = analystSummary.buy;
+      if (analystSummary.hold  !== undefined) s.analysts.hold      = analystSummary.hold;
+      if (analystSummary.sell  !== undefined) s.analysts.sell      = analystSummary.sell;
+      if (analystSummary.total)               s.analysts.total     = analystSummary.total;
+      if (analystSummary.consensus)           s.analysts.consensus = analystSummary.consensus;
+      if (analystSummary.avgTarget)           s.analysts.avgTarget = analystSummary.avgTarget;
+    }
+    if (overview) {
+      if (overview.pe)         s.ratios['P/E (TTM)']  = overview.pe + '×';
+      if (overview.forwardPE)  s.ratios['P/E Fwd']    = overview.forwardPE + '×';
+      if (overview.beta)       s.ratios['Beta']        = '' + overview.beta;
+      if (overview.divYield)   s.ratios['Div. Yield']  = overview.divYield + '%';
+      if (overview.roe)        s.ratios['ROE']         = overview.roe + '%';
+      if (overview.week52High) s.wkH = overview.week52High;
+      if (overview.week52Low)  s.wkL = overview.week52Low;
+    }
+  }
+
+  return result;
 }
 
 async function fetchNewsForTicker(ticker) {
