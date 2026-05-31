@@ -1679,72 +1679,8 @@ async function fetchNewsForTicker(ticker) {
   }
 }
 
-// Stooq symbolen voor Europese aandelen (historische CSV, gratis)
-const STOOQ_HIST = {
-  ACKB: 'aka.br', SOF: 'sof.br', IFX: 'ifx.de',
-  'AKA.BR': 'aka.br', 'SOF.BR': 'sof.br', 'IFX.DE': 'ifx.de',
-  'KBC.BR': 'kbc.br', 'UCB.BR': 'ucb.br', 'ASML.AS': 'asml.nl',
-  'BAS.DE': 'bas.de', 'SAP.DE': 'sap.de',
-};
-
-// Stooq interval per periode
-const STOOQ_INTERVAL = {
-  '15M':'5', '1U':'60', '1M':'d', '3M':'d', '6M':'d',
-  '1J':'d', '2J':'w', '5J':'m', 'MAX':'m',
-};
-
-// Max candles per periode
-const STOOQ_MAX = {
-  '15M':96, '1U':120, '1M':30, '3M':90, '6M':180,
-  '1J':365, '2J':104, '5J':260, 'MAX':120,
-};
-
-async function fetchStooqDirect(stooqSym, period) {
-  const interval = STOOQ_INTERVAL[period] || 'd';
-  // Stooq CSV endpoint — werkt met CORS vanuit browser via allorigins proxy
-  const stooqUrl = `https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSym)}&i=${interval}`;
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(stooqUrl)}`;
-
-  const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
-  if (!r.ok) throw new Error(`Stooq ${r.status}`);
-  const text = await r.text();
-
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) throw new Error('Geen historische data van Stooq');
-
-  const candles = [];
-  for (let i = 1; i < lines.length; i++) {
-    const p = lines[i].split(',');
-    if (p.length < 5) continue;
-    const t = new Date(p[0].trim() + 'T12:00:00Z').getTime();
-    const c = parseFloat(p[4]);
-    if (!c || isNaN(c) || isNaN(t)) continue;
-    candles.push({
-      t, o: parseFloat(p[1]), h: parseFloat(p[2]),
-      l: parseFloat(p[3]), c, v: parseInt(p[5] || '0'),
-    });
-  }
-  if (!candles.length) throw new Error('Geen geldige candles van Stooq');
-  const max = STOOQ_MAX[period] || 365;
-  return candles.slice(-max);
-}
-
-async function fetchHistory(ticker, period) {
-  const stooqSym = STOOQ_HIST[ticker];
-
-  if (stooqSym) {
-    // Europees aandeel → Stooq direct vanuit browser
-    return fetchStooqDirect(stooqSym, period);
-  }
-
-  // US aandeel → Netlify function (Twelve Data werkt voor US)
-  const url = `/.netlify/functions/history?symbol=${encodeURIComponent(ticker)}&period=${encodeURIComponent(period)}`;
-  const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
-  if (!r.ok) throw new Error(`History ${r.status}: ${await r.text().catch(()=>'')}`);
-  const data = await r.json();
-  if (data.error) throw new Error(data.error);
-  return data.candles || [];
-}
+// Yahoo Finance symbolen voor history (via Netlify function)
+// Gebruikt ook door fetchNewsForTicker hieronder
 
 // ─── TECHNISCHE INDICATOREN ────────────────────────────────────────────────────
 function calcSMA(closes, period) {
