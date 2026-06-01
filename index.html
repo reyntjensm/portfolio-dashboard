@@ -386,36 +386,6 @@ canvas.ichart-overlay{position:absolute;top:0;left:0;width:100%;pointer-events:n
 </head>
 <body>
 
-<!-- PIN OVERLAY — verbergt positie-informatie -->
-<div class="pin-overlay" id="pin-overlay">
-  <div class="pin-logo">PORT<em>.</em>FOLIO</div>
-  <div>
-    <div class="pin-title">🔒 Persoonlijke data</div>
-    <div class="pin-sub" style="margin-top:4px;">Voer je pincode in om posities te bekijken</div>
-  </div>
-  <div class="pin-dots" id="pin-dots">
-    <div class="pin-dot" id="pd0"></div>
-    <div class="pin-dot" id="pd1"></div>
-    <div class="pin-dot" id="pd2"></div>
-    <div class="pin-dot" id="pd3"></div>
-  </div>
-  <div class="pin-pad">
-    <div class="pin-key" onclick="pinKey('1')">1</div>
-    <div class="pin-key" onclick="pinKey('2')">2</div>
-    <div class="pin-key" onclick="pinKey('3')">3</div>
-    <div class="pin-key" onclick="pinKey('4')">4</div>
-    <div class="pin-key" onclick="pinKey('5')">5</div>
-    <div class="pin-key" onclick="pinKey('6')">6</div>
-    <div class="pin-key" onclick="pinKey('7')">7</div>
-    <div class="pin-key" onclick="pinKey('8')">8</div>
-    <div class="pin-key" onclick="pinKey('9')">9</div>
-    <div class="pin-key empty"></div>
-    <div class="pin-key" onclick="pinKey('0')">0</div>
-    <div class="pin-key del" onclick="pinDel()">⌫</div>
-  </div>
-  <div class="pin-hint">Publieke info (koersen, nieuws, grafiek) is zichtbaar zonder pin<br>Eerste gebruik: stel je pincode in door 4 cijfers te kiezen</div>
-</div>
-
 <div class="topbar">
   <div class="logo">PORT<em>.</em>FOLIO</div>
   <div class="tb-right">
@@ -989,34 +959,7 @@ canvas.ichart-overlay{position:absolute;top:0;left:0;width:100%;pointer-events:n
 <body>
 
 <!-- PIN OVERLAY — verbergt positie-informatie -->
-<div class="pin-overlay" id="pin-overlay">
-  <div class="pin-logo">PORT<em>.</em>FOLIO</div>
-  <div>
-    <div class="pin-title">🔒 Persoonlijke data</div>
-    <div class="pin-sub" style="margin-top:4px;">Voer je pincode in om posities te bekijken</div>
-  </div>
-  <div class="pin-dots" id="pin-dots">
-    <div class="pin-dot" id="pd0"></div>
-    <div class="pin-dot" id="pd1"></div>
-    <div class="pin-dot" id="pd2"></div>
-    <div class="pin-dot" id="pd3"></div>
-  </div>
-  <div class="pin-pad">
-    <div class="pin-key" onclick="pinKey('1')">1</div>
-    <div class="pin-key" onclick="pinKey('2')">2</div>
-    <div class="pin-key" onclick="pinKey('3')">3</div>
-    <div class="pin-key" onclick="pinKey('4')">4</div>
-    <div class="pin-key" onclick="pinKey('5')">5</div>
-    <div class="pin-key" onclick="pinKey('6')">6</div>
-    <div class="pin-key" onclick="pinKey('7')">7</div>
-    <div class="pin-key" onclick="pinKey('8')">8</div>
-    <div class="pin-key" onclick="pinKey('9')">9</div>
-    <div class="pin-key empty"></div>
-    <div class="pin-key" onclick="pinKey('0')">0</div>
-    <div class="pin-key del" onclick="pinDel()">⌫</div>
-  </div>
-  <div class="pin-hint">Publieke info (koersen, nieuws, grafiek) is zichtbaar zonder pin<br>Eerste gebruik: stel je pincode in door 4 cijfers te kiezen</div>
-</div>
+
 
 <div class="topbar">
   <div class="logo">PORT<em>.</em>FOLIO</div>
@@ -1885,33 +1828,7 @@ async function savePinHash(hash) {
   }
 }
 
-async function initPin() {
-  // Laad PIN hash met timeout — mag nooit de UI blokkeren
-  try {
-    const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
-    pinHashStored = await Promise.race([loadPinHash(), timeoutPromise.then(() => localStorage.getItem('pf_pin_hash') || null)]);
-  } catch(e) {
-    pinHashStored = localStorage.getItem('pf_pin_hash') || null;
-  }
-
-  const session = sessionStorage.getItem(SESSION_KEY);
-
-  if (!pinHashStored) {
-    // Eerste gebruik — laat PIN instellen
-    document.getElementById('pin-overlay').style.display = 'flex';
-    return;
-  }
-
-  if (session === pinHashStored) {
-    // Al ontgrendeld in deze sessie
-    pinUnlocked = true;
-    document.getElementById('pin-overlay').style.display = 'none';
-    return;
-  }
-
-  document.getElementById('pin-overlay').style.display = 'flex';
-}
-
+function initPin() { pinUnlocked = true; }
 function pinKey(digit) {
   if (pinBuffer.length >= 4) return;
   pinBuffer += digit;
@@ -4448,7 +4365,10 @@ function lockDashboard() {
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 (async function init() {
   // 0. PIN systeem initialiseren (Supabase-backed voor cross-device sync)
-  await initPin();
+  await // PIN uitgeschakeld
+pinUnlocked = true;
+document.getElementById('pin-overlay') && (document.getElementById('pin-overlay').style.display = 'none');
+renderSummary(); renderOverview();
 
   // 1. Render meteen met statische data (zonder posities)
   renderSummary(); renderOverview(); buildTabs();
