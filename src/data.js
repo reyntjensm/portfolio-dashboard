@@ -1,20 +1,30 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// src/data.js — Live data via Yahoo Finance + AI nieuws via Anthropic
-// Vervangt alle Alpha Vantage en Finnhub calls uit index.html.
+// src/data.js — Live data laag
+// Koersen + grafieken : Yahoo Finance v8 (onbeperkt, geen auth)
+// Analyst consensus   : Alpha Vantage OVERVIEW (25 calls/dag, 24u cache)
+// AI nieuws           : Anthropic (optioneel, via setAnthropicKey())
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const YF_WORKER = 'https://portfolio-dashboard.michiel-0be.workers.dev/yf';
+const YF_WORKER  = 'https://portfolio-dashboard.michiel-0be.workers.dev/yf';
+const AV_KEY     = 'YV7LYG7RHI1SPAS6';
+const AV_MAX_DAY = 25; // Alpha Vantage gratis limiet per dag
 
-// Yahoo Finance ticker mapping (portfolio ticker → YF ticker)
-// Let op: ACKB → ACKB.BR (niet AKA.BR), GOOGL → GOOG
+// Yahoo Finance ticker mapping
 const YF_SYM_MAP = {
   AAPL:  'AAPL',
   GOOGL: 'GOOG',
   ACKB:  'ACKB.BR',
   SOF:   'SOF.BR',
   IFX:   'IFX.DE',
-  // Extra Europese tickers: voeg hier toe indien nodig
-  // KBC: 'KBC.BR', UCB: 'UCB.BR', ASML: 'ASML.AS', SAP: 'SAP.DE'
+};
+
+// Alpha Vantage ticker mapping
+const AV_SYM_MAP = {
+  AAPL:  'AAPL',
+  GOOGL: 'GOOGL',
+  ACKB:  'AKA.BRU',
+  SOF:   'SOF.BRU',
+  IFX:   'IFX.DEX',
 };
 
 // Yahoo Finance periodes voor grafieken
@@ -30,40 +40,118 @@ const YF_HIST_CFG = {
   'MAX': { range: 'max', interval: '1mo' },
 };
 
-// ─── IN-MEMORY CACHE ──────────────────────────────────────────────────────────
-const _dc = {};
-function dcGet(k) {
-  const e = _dc[k];
+// ─── IN-MEMORY CACHE (verdwijnt bij refresh) ──────────────────────────────────
+const _mem = {};
+function memGet(k) {
+  const e = _mem[k];
   if (!e || Date.now() - e.ts > e.ttl) return null;
   return e.v;
 }
-function dcSet(k, v, ttl) { _dc[k] = { v, ts: Date.now(), ttl }; }
+function memSet(k, v, ttl) { _mem[k] = { v, ts: Date.now(), ttl }; }
 
-// ─── HELPER: fetch via Worker ─────────────────────────────────────────────────
-// Alle requests gaan via onze eigen Worker — geen externe CORS proxies meer
-async function yfFetch(endpoint, extraParams = {}) {
-  // Bouw URL manueel zodat 'endpoint' niet dubbel wordt geëncodeerd
-  // door URLSearchParams. De slashes in v8/finance/chart/AAPL moeten intact blijven.
-  const extra = Object.entries(extraParams)
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-    .join('&');
-  const url = `${YF_WORKER}?endpoint=${endpoint}${extra ? '&' + extra : ''}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
-  if (!res.ok) throw new Error(`Worker fout ${res.status} voor ${endpoint}`);
-  return res.json();
+// ─── LOCALSTORAGE CACHE (blijft na refresh, 24u) ─────────────────────────────
+function lsGet(k) {
+  try {
+    const raw = localStorage.getItem('pf_' + k);
+    if (!raw) return null;
+    const e = JSON.parse(raw);
+    if (Date.now() - e.ts > e.ttl) { localStorage.removeItem('pf_' + k); return null; }
+    return e.v;
+  } catch(_) { return null; }
 }
+function lsSet(k, v, ttl) {
+  try { localStorage.setItem('pf_' + k, JSON.stringify({ v, ts: Date.now(), ttl })); } catch(_) {}
+}
+
+// ─── ALPHA VANTAGE CALL TELLER ────────────────────────────────────────────────
+// Houdt bij hoeveel AV calls vandaag al gemaakt zijn
+function avCallsToday() {
+  try {
+    const raw = localStorage.getItem('pf_av_calls');
+    if (!raw) return 0;
+    const e = JSON.parse(raw);
+    const today = new Date().toDateString();
+    if (e.date !== today) return 0;
+    return e.count || 0;
+  } catch(_) { return 0; }
+}
+
+function avIncrementCalls() {
+  try {
+    const today = new Date().toDateString();
+    const count = avCallsToday() + 1;
+    localStorage.setItem('pf_av_calls', JSON.stringify({ date: today, count }));
+    updateAvBadge(count);
+    return count;
+  } catch(_) { return 0; }
+}
+
+function avLimitReached() {
+  return avCallsToday() >= AV_MAX_DAY;
+}
+
+// Toon badge in de UI over het aantal resterende AV calls
+function updateAvBadge(used) {
+  const remaining = AV_MAX_DAY - used;
+  const pct = (used / AV_MAX_DAY) * 100;
+
+  // Verwijder bestaande badge
+  const existing = document.getElementById('av-limit-badge');
+  if (existing) existing.remove();
+
+  // Maak nieuwe badge
+  const badge = document.createElement('div');
+  badge.id = 'av-limit-badge';
+  badge.style.cssText = `
+    position:fixed; bottom:80px; right:12px; z-index:500;
+    background:var(--s1); border:1px solid ${remaining <= 5 ? 'var(--red)' : remaining <= 10 ? 'var(--orange)' : 'var(--b1)'};
+    border-radius:10px; padding:8px 12px; font-family:var(--mono); font-size:10px;
+    color:${remaining <= 5 ? 'var(--red)' : remaining <= 10 ? 'var(--orange)' : 'var(--muted)'};
+    box-shadow:0 4px 12px rgba(0,0,0,.3); cursor:pointer;
+  `;
+  badge.innerHTML = `
+    <div style="font-weight:700;margin-bottom:3px;">Alpha Vantage</div>
+    <div>${remaining <= 0 ? '⛔ Daglimiet bereikt' : `${remaining} / ${AV_MAX_DAY} calls resterend`}</div>
+    <div style="height:3px;background:var(--b2);border-radius:2px;margin-top:5px;">
+      <div style="height:100%;width:${pct}%;background:${remaining <= 5 ? 'var(--red)' : remaining <= 10 ? 'var(--orange)' : 'var(--green)'};border-radius:2px;transition:width .3s;"></div>
+    </div>
+    ${remaining <= 0 ? '<div style="margin-top:4px;font-size:9px;color:var(--muted);">Reset om middernacht</div>' : ''}
+  `;
+  // Klik om te verbergen
+  badge.onclick = () => badge.remove();
+  document.body.appendChild(badge);
+
+  // Auto-verberg na 8 seconden (tenzij limiet bereikt)
+  if (remaining > 0) {
+    setTimeout(() => { if (document.getElementById('av-limit-badge')) badge.remove(); }, 8000);
+  }
+}
+
+// Toon melding bij limiet bereikt
+function showAvLimitWarning() {
+  if (typeof showDbStatus === 'function') {
+    showDbStatus('⛔ Alpha Vantage daglimiet bereikt (25/25). Analyst data wordt morgen vernieuwd.', 'orange');
+  }
+  updateAvBadge(AV_MAX_DAY);
+}
+
+// Initialiseer badge bij laden
+document.addEventListener('DOMContentLoaded', () => {
+  const used = avCallsToday();
+  if (used > 0) updateAvBadge(used);
+});
 
 // ─── YAHOO FINANCE: REALTIME KOERS ───────────────────────────────────────────
 async function yfQuote(yfSym) {
   const key = 'q_' + yfSym;
-  const cached = dcGet(key);
+  const cached = memGet(key);
   if (cached) return cached;
 
-  const json = await yfFetch(`v8/finance/chart/${yfSym}`, {
-    interval: '1d',
-    range: '1d'
-  });
+  const url = `${YF_WORKER}?endpoint=v8/finance/chart/${encodeURIComponent(yfSym)}&interval=1d&range=1d`;
+  const res  = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) throw new Error(`Yahoo quote ${res.status} voor ${yfSym}`);
 
+  const json   = await res.json();
   const result = json?.chart?.result?.[0];
   if (!result) throw new Error(`Geen quote data voor ${yfSym}`);
 
@@ -92,22 +180,26 @@ async function yfQuote(yfSym) {
     error: null,
   };
 
-  dcSet(key, out, 5 * 60 * 1000);
+  memSet(key, out, 5 * 60 * 1000); // 5 min
   return out;
 }
 
 // ─── YAHOO FINANCE: HISTORISCHE GRAFIEKDATA ───────────────────────────────────
 async function yfHistory(yfSym, period) {
-  const key = 'h_' + yfSym + '_' + period;
-  const cached = dcGet(key);
+  const key    = 'h_' + yfSym + '_' + period;
+  const cached = memGet(key);
   if (cached) return cached;
 
-  const cfg = YF_HIST_CFG[period] || YF_HIST_CFG['1J'];
-  const json = await yfFetch(`v8/finance/chart/${yfSym}`, {
-    range: cfg.range,
-    interval: cfg.interval
-  });
+  // Probeer ook localStorage voor historische data
+  const lsCached = lsGet('hist_' + yfSym + '_' + period);
+  if (lsCached) { memSet(key, lsCached, 60 * 60 * 1000); return lsCached; }
 
+  const cfg = YF_HIST_CFG[period] || YF_HIST_CFG['1J'];
+  const url = `${YF_WORKER}?endpoint=v8/finance/chart/${encodeURIComponent(yfSym)}&range=${cfg.range}&interval=${cfg.interval}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`Yahoo history ${res.status}`);
+
+  const json   = await res.json();
   const result = json?.chart?.result?.[0];
   if (!result) throw new Error(`Geen historische data voor ${yfSym}`);
 
@@ -128,105 +220,137 @@ async function yfHistory(yfSym, period) {
 
   if (!candles.length) throw new Error(`Geen candles voor ${yfSym} (${period})`);
 
-  const ttl = ['15M', '1U'].includes(period) ? 5 * 60 * 1000 : 24 * 60 * 60 * 1000;
-  dcSet(key, candles, ttl);
+  const isIntraday = ['15M', '1U'].includes(period);
+  const ttl = isIntraday ? 5 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  memSet(key, candles, ttl);
+  if (!isIntraday) lsSet('hist_' + yfSym + '_' + period, candles, ttl);
   return candles;
 }
 
-// ─── YAHOO FINANCE: ANALYST CONSENSUS (v6 - geen crumb nodig) ───────────────
-async function yfAnalyst(yfSym) {
-  const key = 'a_' + yfSym;
-  const cached = dcGet(key);
-  if (cached) return cached;
+// ─── ALPHA VANTAGE: ANALYST CONSENSUS + RATIOS ───────────────────────────────
+// Gebruikt OVERVIEW endpoint — geeft P/E, beta, analyst ratings, koersdoel
+// 24u localStorage cache zodat max 5 calls/dag voor 5 aandelen
+async function avOverview(ticker) {
+  const lsKey  = 'av_ov_' + ticker;
+  const memKey = 'aov_' + ticker;
 
-  // v6/recommendationsBySymbol: geeft buy/hold/sell counts — geen crumb nodig
-  const recUrl = `${YF_WORKER}?endpoint=v6/finance/recommendationsBySymbol/${encodeURIComponent(yfSym)}`;
-  
-  // v8/finance/chart met modules=financials: geeft koersdoelen
-  const chartUrl = `${YF_WORKER}?endpoint=v8/finance/chart/${encodeURIComponent(yfSym)}&interval=1d&range=1d&modules=financialData`;
+  // 1. Check memory cache
+  const memCached = memGet(memKey);
+  if (memCached) return memCached;
 
-  let recData  = null;
-  let chartData = null;
+  // 2. Check localStorage cache (24u)
+  const lsCached = lsGet(lsKey);
+  if (lsCached) {
+    memSet(memKey, lsCached, 60 * 60 * 1000);
+    return lsCached;
+  }
+
+  // 3. Check AV daglimiet
+  if (avLimitReached()) {
+    showAvLimitWarning();
+    return null;
+  }
+
+  // 4. Haal verse data op via Alpha Vantage
+  const avSym = AV_SYM_MAP[ticker] || ticker;
+  const url   = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${encodeURIComponent(avSym)}&apikey=${AV_KEY}`;
 
   try {
-    const [r1, r2] = await Promise.allSettled([
-      fetch(recUrl,   { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : null),
-      fetch(chartUrl, { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : null),
-    ]);
-    recData   = r1.status === 'fulfilled' ? r1.value : null;
-    chartData = r2.status === 'fulfilled' ? r2.value : null;
+    const res  = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) throw new Error(`AV HTTP ${res.status}`);
+
+    const d = await res.json();
+
+    // Check op rate limit melding van Alpha Vantage
+    if (d.Note || d.Information) {
+      console.warn('Alpha Vantage rate limit:', d.Note || d.Information);
+      // Stel teller in op maximum zodat we niet meer proberen
+      localStorage.setItem('pf_av_calls', JSON.stringify({
+        date: new Date().toDateString(),
+        count: AV_MAX_DAY
+      }));
+      showAvLimitWarning();
+      return null;
+    }
+
+    if (!d.Symbol) {
+      console.warn('Alpha Vantage: geen data voor', avSym);
+      return null;
+    }
+
+    // Verhoog teller
+    avIncrementCalls();
+
+    // Verwerk analyst data
+    const buy   = parseInt(d.AnalystRatingStrongBuy || '0') + parseInt(d.AnalystRatingBuy || '0');
+    const hold  = parseInt(d.AnalystRatingHold || '0');
+    const sell  = parseInt(d.AnalystRatingSell || '0') + parseInt(d.AnalystRatingStrongSell || '0');
+    const total = buy + hold + sell;
+    const buyR  = total ? buy / total : 0;
+
+    const consensus =
+      buyR > 0.65  ? 'Sterk Kopen'   :
+      buyR > 0.45  ? 'Kopen'         :
+      sell/Math.max(total,1) > 0.4 ? 'Verkopen' : 'Houden';
+
+    const avgTarget = d.AnalystTargetPrice ? parseFloat(d.AnalystTargetPrice) : null;
+    const pe        = d.PERatio            ? parseFloat(d.PERatio)            : null;
+    const forwardPE = d.ForwardPE          ? parseFloat(d.ForwardPE)          : null;
+    const beta      = d.Beta               ? parseFloat(d.Beta)               : null;
+    const divYield  = d.DividendYield      ? +(parseFloat(d.DividendYield) * 100).toFixed(2) : null;
+    const roe       = d.ReturnOnEquityTTM  ? +(parseFloat(d.ReturnOnEquityTTM) * 100).toFixed(1) : null;
+    const wk52H     = d['52WeekHigh']      ? parseFloat(d['52WeekHigh'])      : null;
+    const wk52L     = d['52WeekLow']       ? parseFloat(d['52WeekLow'])       : null;
+    const mktCap    = d.MarketCapitalization ? parseInt(d.MarketCapitalization) : null;
+
+    const mktCapFmt = mktCap
+      ? mktCap >= 1e12 ? (mktCap/1e12).toFixed(2)+'T'
+      : mktCap >= 1e9  ? (mktCap/1e9).toFixed(1)+'B'
+      :                   (mktCap/1e6).toFixed(0)+'M'
+      : null;
+
+    const ratiosLive = {};
+    if (pe)       ratiosLive['P/E (TTM)']    = pe.toFixed(1) + '×';
+    if (forwardPE)ratiosLive['P/E Fwd']      = forwardPE.toFixed(1) + '×';
+    if (beta)     ratiosLive['Beta']          = beta.toFixed(2);
+    if (divYield) ratiosLive['Div. Yield']    = divYield + '%';
+    if (roe)      ratiosLive['ROE']           = roe + '%';
+    if (mktCapFmt)ratiosLive['Mktcap']        = mktCapFmt;
+    if (wk52H)    ratiosLive['52w Hoog']      = String(wk52H);
+    if (wk52L)    ratiosLive['52w Laag']      = String(wk52L);
+    if (d.GrossProfitTTM && d.RevenueTTM) {
+      const gm = (parseInt(d.GrossProfitTTM) / parseInt(d.RevenueTTM) * 100).toFixed(1);
+      ratiosLive['Brutomarge'] = gm + '%';
+    }
+    if (d.OperatingMarginTTM) {
+      ratiosLive['Bedrijfsmarge'] = (parseFloat(d.OperatingMarginTTM) * 100).toFixed(1) + '%';
+    }
+    if (d.EVToEBITDA) ratiosLive['EV/EBITDA'] = parseFloat(d.EVToEBITDA).toFixed(1) + '×';
+    if (d.PriceToSalesRatioTTM) ratiosLive['P/S'] = parseFloat(d.PriceToSalesRatioTTM).toFixed(1) + '×';
+
+    const out = {
+      consensus, buy, hold, sell, total,
+      strongBuy: parseInt(d.AnalystRatingStrongBuy || '0'),
+      strongSell: parseInt(d.AnalystRatingStrongSell || '0'),
+      avgTarget, highTarget: null, lowTarget: null,
+      pe, forwardPE, beta, divYield, roe,
+      week52High: wk52H, week52Low: wk52L,
+      ratiosLive,
+      upgrades: [], // AV OVERVIEW geeft geen upgrade history
+    };
+
+    // Sla 24u op in localStorage
+    lsSet(lsKey, out, 24 * 60 * 60 * 1000);
+    memSet(memKey, out, 60 * 60 * 1000);
+    return out;
+
   } catch(e) {
-    console.warn('yfAnalyst fetch fout:', e.message);
+    console.warn(`Alpha Vantage OVERVIEW fout voor ${ticker}:`, e.message);
+    return null;
   }
-
-  // Verwerk recommendationsBySymbol
-  // Response: { finance: { result: [{ symbol, recommendedSymbols, ... }] } }
-  // OF: { quoteSummary: { result: [{ recommendationTrend: { trend: [...] } }] } }
-  let buy = 0, hold = 0, sell = 0, total = 0, consensus = 'Kopen', recKey = '';
-
-  const finResult = recData?.finance?.result?.[0];
-  if (finResult?.recommendationTrend) {
-    const trend = finResult.recommendationTrend.trend?.[0] ?? {};
-    buy  = (trend.strongBuy ?? 0) + (trend.buy ?? 0);
-    hold = trend.hold ?? 0;
-    sell = (trend.strongSell ?? 0) + (trend.sell ?? 0);
-    total = buy + hold + sell;
-  }
-
-  // Fallback: probeer v10 response formaat
-  const qsResult = recData?.quoteSummary?.result?.[0];
-  if (!total && qsResult?.recommendationTrend) {
-    const trend = qsResult.recommendationTrend.trend?.[0] ?? {};
-    buy  = (trend.strongBuy ?? 0) + (trend.buy ?? 0);
-    hold = trend.hold ?? 0;
-    sell = (trend.strongSell ?? 0) + (trend.sell ?? 0);
-    total = buy + hold + sell;
-    recKey = qsResult.financialData?.recommendationKey ?? '';
-  }
-
-  if (total > 0) {
-    const buyRatio = (buy / total);
-    consensus = recKey === 'strong_buy'   ? 'Sterk Kopen'   :
-                recKey === 'buy'          ? 'Kopen'          :
-                recKey === 'hold'         ? 'Houden'         :
-                recKey === 'sell'         ? 'Verkopen'       :
-                buyRatio > 0.65 ? 'Sterk Kopen' :
-                buyRatio > 0.45 ? 'Kopen'       :
-                sell/total > 0.4 ? 'Verkopen'   : 'Houden';
-  }
-
-  // Koersdoelen uit chart meta
-  const meta = chartData?.chart?.result?.[0]?.meta ?? {};
-  const avgTarget  = meta.targetMeanPrice  ?? meta.targetPrice ?? null;
-  const highTarget = meta.fiftyTwoWeekHigh ?? null;
-  const lowTarget  = meta.fiftyTwoWeekLow  ?? null;
-
-  const out = {
-    consensus, buy, hold, sell,
-    strongBuy: 0, strongSell: 0,
-    total: total || 0,
-    avgTarget, highTarget: null, lowTarget: null,
-    currentPrice: meta.regularMarketPrice ?? null,
-    recKey, upgrades: [],
-    ratiosLive: {
-      '52w Hoog': meta.fiftyTwoWeekHigh ? String(meta.fiftyTwoWeekHigh) : undefined,
-      '52w Laag': meta.fiftyTwoWeekLow  ? String(meta.fiftyTwoWeekLow)  : undefined,
-    },
-    pe: null, forwardPE: null, beta: null, divYield: null, roe: null,
-    week52High: meta.fiftyTwoWeekHigh ?? null,
-    week52Low:  meta.fiftyTwoWeekLow  ?? null,
-  };
-
-  // Verwijder undefined waarden uit ratiosLive
-  Object.keys(out.ratiosLive).forEach(k => {
-    if (out.ratiosLive[k] === undefined) delete out.ratiosLive[k];
-  });
-
-  dcSet(key, out, 6 * 60 * 60 * 1000); // 6u cache
-  return out;
 }
 
-// ─── ANTHROPIC AI: ACTUEEL NIEUWS PER AANDEEL ────────────────────────────────
+// ─── ANTHROPIC AI: ACTUEEL NIEUWS (optioneel) ─────────────────────────────────
 function setAnthropicKey(key) {
   if (key?.startsWith('sk-ant-')) {
     localStorage.setItem('pf_ant_key', key);
@@ -240,17 +364,16 @@ function setAnthropicKey(key) {
 }
 
 async function fetchAINews(ticker) {
-  const key = 'news_ai_' + ticker;
-  const cached = dcGet(key);
+  const key    = 'news_ai_' + ticker;
+  const cached = lsGet(key);
   if (cached) return cached;
 
   const apiKey = localStorage.getItem('pf_ant_key');
   if (!apiKey) return null;
 
-  const s = STOCKS[ticker];
+  const s     = STOCKS[ticker];
   if (!s) return null;
-
-  const today = new Date().toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' });
+  const today = new Date().toLocaleDateString('nl-BE', { day:'numeric', month:'long', year:'numeric' });
   const price = s.price ? s.price.toFixed(2) : '—';
   const chg   = s.chgNum != null ? (s.chgNum >= 0 ? '+' : '') + s.chgNum.toFixed(2) + '%' : '—';
 
@@ -266,27 +389,22 @@ async function fetchAINews(ticker) {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1200,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        system: `Je bent een financieel analist die actueel beleggersnieuws schrijft. Vandaag is ${today}. Huidige koers ${ticker}: ${price} (${chg}).
+        system: `Je bent een financieel analist. Vandaag is ${today}. Koers ${ticker}: ${price} (${chg}).
 Zoek het meest recente nieuws voor ${s.full || s.name} (${ticker}) van de laatste 4 weken.
-Antwoord UITSLUITEND met geldige JSON zonder markdown of extra tekst:
-{"news":[{"badge":"nb-earn","bl":"CATEGORIE · ONDERWERP","date":"datum","time":"","title":"Nieuwstitel max 100 tekens","body":"2-3 zinnen met <strong>vetgedrukte</strong> kernwoorden."}]}
-Badges: nb-earn=earnings/resultaten, nb-risk=risico/negatief, nb-cat=katalysator/positief, nb-corp=bedrijfsnieuws, nb-ana=analyst upgrade/downgrade.
-Genereer 3 tot 4 items. Schrijf in het Nederlands.`,
-        messages: [{ role: 'user', content: `Geef de 3-4 meest actuele en relevante nieuwsitems voor ${s.full || s.name} (${ticker}).` }],
+Antwoord UITSLUITEND met geldige JSON zonder markdown:
+{"news":[{"badge":"nb-earn","bl":"CATEGORIE · ONDERWERP","date":"datum","time":"","title":"Max 100 tekens","body":"2-3 zinnen met <strong>vetgedrukte</strong> kernwoorden."}]}
+Badges: nb-earn=earnings, nb-risk=risico, nb-cat=katalysator, nb-corp=bedrijfsnieuws, nb-ana=analyst.
+Genereer 3-4 items in het Nederlands.`,
+        messages: [{ role:'user', content:`Meest actuele nieuwsitems voor ${s.full || s.name} (${ticker})?` }],
       }),
     });
-
-    if (!res.ok) { console.warn('Anthropic fout:', res.status); return null; }
+    if (!res.ok) return null;
     const data  = await res.json();
     const text  = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
-    const clean = text.replace(/```json|```/g, '').trim();
-    const news  = JSON.parse(clean).news ?? [];
-    if (news.length) {
-      dcSet(key, news, 6 * 60 * 60 * 1000);
-      return news;
-    }
+    const news  = JSON.parse(text.replace(/```json|```/g,'').trim()).news ?? [];
+    if (news.length) { lsSet(key, news, 6 * 60 * 60 * 1000); return news; }
     return null;
-  } catch (e) {
+  } catch(e) {
     console.warn(`AI nieuws fout voor ${ticker}:`, e.message);
     return null;
   }
@@ -296,48 +414,57 @@ Genereer 3 tot 4 items. Schrijf in het Nederlands.`,
 // OVERRIDES — vervangen de originele functies uit index.html
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// Vervangt fetchOneTicker (was Alpha Vantage GLOBAL_QUOTE + Finnhub)
 async function fetchOneTicker(origTicker) {
   const yfSym = YF_SYM_MAP[origTicker] || origTicker;
-  try {
-    const q = await yfQuote(yfSym);
-    return {
-      price: q.price, chgAbs: q.chgAbs, chgPct: q.chgPct,
-      prevClose: q.prevClose, dayHigh: q.dayHigh, dayLow: q.dayLow,
-      wkHigh: q.wkHigh, wkLow: q.wkLow, currency: q.currency,
-      name: q.name, exchange: q.exchange, mktCap: q.mktCap,
-      pe: null, targetLow: null, targetMean: null, targetHigh: null,
-      numAnalysts: null, recKey: null,
-      strongBuy: 0, buy: 0, hold: 0, sell: 0, strongSell: 0,
-    };
-  } catch (e) {
-    throw new Error(`${origTicker}: ${e.message}`);
-  }
+  const q = await yfQuote(yfSym);
+  return {
+    price:       q.price,
+    chgAbs:      q.chgAbs,
+    chgPct:      q.chgPct,
+    prevClose:   q.prevClose,
+    dayHigh:     q.dayHigh,
+    dayLow:      q.dayLow,
+    wkHigh:      q.wkHigh,
+    wkLow:       q.wkLow,
+    currency:    q.currency,
+    name:        q.name,
+    exchange:    q.exchange,
+    mktCap:      q.mktCap,
+    pe:          null,
+    targetLow:   null,
+    targetMean:  null,
+    targetHigh:  null,
+    numAnalysts: null,
+    recKey:      null,
+    strongBuy: 0, buy: 0, hold: 0, sell: 0, strongSell: 0,
+  };
 }
 
+// Vervangt fetchHistory (was Alpha Vantage TIME_SERIES)
 async function fetchHistory(ticker, period) {
   const yfSym = YF_SYM_MAP[ticker] || ticker;
   return yfHistory(yfSym, period);
 }
 
+// Vervangt fetchAnalystData (was Finnhub + Alpha Vantage)
 async function fetchAnalystData(ticker) {
   if (analystCache[ticker]) return analystCache[ticker];
 
-  const yfSym = YF_SYM_MAP[ticker] || ticker;
-  const data  = await yfAnalyst(yfSym);
+  const data = await avOverview(ticker);
   if (!data) return null;
 
+  // Patch STOCKS direct
   const s = STOCKS[ticker];
   if (s) {
     if (data.total > 0) {
       s.analysts = s.analysts || {};
-      s.analysts.buy       = data.buy + data.strongBuy;
+      s.analysts.buy       = data.buy;
       s.analysts.hold      = data.hold;
-      s.analysts.sell      = data.sell + data.strongSell;
+      s.analysts.sell      = data.sell;
       s.analysts.total     = data.total;
       s.analysts.consensus = data.consensus;
-      if (data.avgTarget)  s.analysts.avgTarget  = Math.round(data.avgTarget);
-      if (data.highTarget) s.analysts.highTarget = Math.round(data.highTarget);
-      if (data.lowTarget)  s.analysts.lowTarget  = Math.round(data.lowTarget);
+      if (data.avgTarget) s.analysts.avgTarget = Math.round(data.avgTarget);
     }
     s.ratios = { ...s.ratios, ...data.ratiosLive };
     if (data.week52High) s.wkH = data.week52High;
@@ -346,26 +473,40 @@ async function fetchAnalystData(ticker) {
 
   const result = {
     analystSummary: {
-      buy: data.buy + data.strongBuy, hold: data.hold,
-      sell: data.sell + data.strongSell, total: data.total,
-      strongBuy: data.strongBuy, strongSell: data.strongSell,
-      consensus: data.consensus,
-      avgTarget:  data.avgTarget  ? Math.round(data.avgTarget)  : null,
-      highTarget: data.highTarget ? Math.round(data.highTarget) : null,
-      lowTarget:  data.lowTarget  ? Math.round(data.lowTarget)  : null,
+      buy:        data.buy,
+      hold:       data.hold,
+      sell:       data.sell,
+      total:      data.total,
+      strongBuy:  data.strongBuy,
+      strongSell: data.strongSell,
+      consensus:  data.consensus,
+      avgTarget:  data.avgTarget ? Math.round(data.avgTarget) : null,
+      highTarget: null,
+      lowTarget:  null,
     },
-    upgrades: data.upgrades,
+    upgrades: [],
     overview: {
-      pe: data.pe, forwardPE: data.forwardPE, beta: data.beta,
-      divYield: data.divYield, roe: data.roe,
+      pe:          data.pe,
+      forwardPE:   data.forwardPE,
+      beta:        data.beta,
+      divYield:    data.divYield,
+      roe:         data.roe,
       targetPrice: data.avgTarget,
-      week52High: data.week52High, week52Low: data.week52Low,
+      week52High:  data.week52High,
+      week52Low:   data.week52Low,
     },
   };
 
   analystCache[ticker] = result;
 
-  // AI nieuws op achtergrond ophalen
+  // Re-render als actief
+  if (typeof activeStock !== 'undefined' && activeStock === ticker &&
+      typeof activePage  !== 'undefined' && activePage  === 'detail' &&
+      typeof renderDetail === 'function') {
+    renderDetail(ticker);
+  }
+
+  // AI nieuws op achtergrond (alleen als Anthropic key ingesteld)
   fetchAINews(ticker).then(news => {
     if (news?.length && STOCKS[ticker]) {
       newsCache[ticker] = { items: news, _isAI: true };
@@ -380,17 +521,39 @@ async function fetchAnalystData(ticker) {
   return result;
 }
 
-
+// Vervangt fetchNewsForTicker
 async function fetchNewsForTicker(ticker) {
   if (newsCache[ticker]) return newsCache[ticker];
   return null;
 }
 
+// Vervangt fetchWlNews
 async function fetchWlNews(ticker) {
-  if (wlNewsCache[ticker]) return wlNewsCache[ticker];
+  if (wlNewsCache?.[ticker]) return wlNewsCache[ticker];
   return null;
 }
 
-console.log('✓ src/data.js geladen — Yahoo Finance via Worker actief');
-console.log('  Worker URL:', YF_WORKER);
-console.log('  AI nieuws instellen: setAnthropicKey("sk-ant-api03-...")');
+// Vervangt syncNow — wist ook de AV cache zodat verse data wordt opgehaald
+const _origSyncNow = typeof syncNow === 'function' ? syncNow : null;
+function syncNow() {
+  // Wis analyst localStorage cache zodat AV opnieuw wordt aangeroepen
+  Object.keys(STOCKS || {}).forEach(t => {
+    localStorage.removeItem('pf_av_ov_' + t);
+  });
+  // Wis memory cache
+  Object.keys(_mem).forEach(k => delete _mem[k]);
+
+  if (_origSyncNow) return _origSyncNow();
+
+  const btn = document.querySelector('.icon-btn[onclick="syncNow()"]');
+  if (btn) btn.style.animation = 'spin 1s linear infinite';
+  Promise.resolve()
+    .then(() => typeof loadTickersFromDB === 'function' ? loadTickersFromDB() : null)
+    .then(() => typeof refreshPrices === 'function' ? refreshPrices(false) : null)
+    .finally(() => { if (btn) btn.style.animation = ''; });
+}
+
+console.log('✓ src/data.js geladen');
+console.log('  Koersen: Yahoo Finance (onbeperkt)');
+console.log('  Analyst: Alpha Vantage OVERVIEW (' + avCallsToday() + '/' + AV_MAX_DAY + ' calls vandaag)');
+console.log('  AI nieuws: ' + (localStorage.getItem('pf_ant_key') ? 'actief' : 'inactief (setAnthropicKey("sk-ant-..."))'));
