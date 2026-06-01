@@ -139,7 +139,7 @@ async function yfAnalyst(yfSym) {
   const cached = dcGet(key);
   if (cached) return cached;
 
-  const modules = 'recommendationTrend,upgradeDowngradeHistory,financialData,defaultKeyStatistics,summaryDetail';
+  const modules = 'recommendationTrend,financialData,defaultKeyStatistics,summaryDetail';
   const json = await yfFetch(`v10/finance/quoteSummary/${yfSym}`, { modules });
 
   const s = json?.quoteSummary?.result?.[0];
@@ -180,6 +180,10 @@ async function yfAnalyst(yfSym) {
         h.action === 'up'   ? '↑ Upgrade'   :
         h.action === 'down' ? '↓ Downgrade' :
         h.action === 'init' ? '▶ Initiatie'  : '→ Herbevestigd',
+      // sentiment veld dat refreshAnalystUI verwacht
+      sentiment:
+        h.action === 'up'   ? 'positive' :
+        h.action === 'down' ? 'negative' : 'neutral',
     }));
 
   const ks = s.defaultKeyStatistics ?? {};
