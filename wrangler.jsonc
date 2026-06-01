@@ -5,11 +5,6 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "exclude": [
-      ".git",
-      ".wrangler",
-      "src/worker.js",
-      "wrangler.jsonc"
-    ]
+    "exclude": [".git", ".wrangler", "src/worker.js", "wrangler.jsonc"]
   }
 }
