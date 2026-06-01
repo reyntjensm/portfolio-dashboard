@@ -2813,7 +2813,9 @@ function refreshAnalystUI(t) {
         </div>`;
       }).join('');
     } else if (loader) {
-      loader.textContent = 'Geen recente updates gevonden via Finnhub';
+      loader.textContent = 'Geen recente analist updates beschikbaar';
+    } else if (wrap && !ups.length) {
+      wrap.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:8px 0;">Geen recente updates beschikbaar</div>';
     }
     // Update consensus bar ook
     const s2 = STOCKS[t];
