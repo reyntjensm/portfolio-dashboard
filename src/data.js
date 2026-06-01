@@ -42,8 +42,12 @@ function dcSet(k, v, ttl) { _dc[k] = { v, ts: Date.now(), ttl }; }
 // ─── HELPER: fetch via Worker ─────────────────────────────────────────────────
 // Alle requests gaan via onze eigen Worker — geen externe CORS proxies meer
 async function yfFetch(endpoint, extraParams = {}) {
-  const params = new URLSearchParams({ endpoint, ...extraParams });
-  const url = `${YF_WORKER}?${params.toString()}`;
+  // Bouw URL manueel zodat 'endpoint' niet dubbel wordt geëncodeerd
+  // door URLSearchParams. De slashes in v8/finance/chart/AAPL moeten intact blijven.
+  const extra = Object.entries(extraParams)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  const url = `${YF_WORKER}?endpoint=${endpoint}${extra ? '&' + extra : ''}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
   if (!res.ok) throw new Error(`Worker fout ${res.status} voor ${endpoint}`);
   return res.json();
@@ -55,7 +59,7 @@ async function yfQuote(yfSym) {
   const cached = dcGet(key);
   if (cached) return cached;
 
-  const json = await yfFetch(`v8/finance/chart/${encodeURIComponent(yfSym)}`, {
+  const json = await yfFetch(`v8/finance/chart/${yfSym}`, {
     interval: '1d',
     range: '1d'
   });
@@ -99,7 +103,7 @@ async function yfHistory(yfSym, period) {
   if (cached) return cached;
 
   const cfg = YF_HIST_CFG[period] || YF_HIST_CFG['1J'];
-  const json = await yfFetch(`v8/finance/chart/${encodeURIComponent(yfSym)}`, {
+  const json = await yfFetch(`v8/finance/chart/${yfSym}`, {
     range: cfg.range,
     interval: cfg.interval
   });
@@ -136,7 +140,7 @@ async function yfAnalyst(yfSym) {
   if (cached) return cached;
 
   const modules = 'recommendationTrend,upgradeDowngradeHistory,financialData,defaultKeyStatistics,summaryDetail';
-  const json = await yfFetch(`v10/finance/quoteSummary/${encodeURIComponent(yfSym)}`, { modules });
+  const json = await yfFetch(`v10/finance/quoteSummary/${yfSym}`, { modules });
 
   const s = json?.quoteSummary?.result?.[0];
   if (!s) return null;
