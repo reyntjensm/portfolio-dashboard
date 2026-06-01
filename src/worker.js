@@ -1,12 +1,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // src/worker.js — Cloudflare Worker
-// Yahoo Finance proxy met werkende crumb authenticatie
+// Crumb wordt opgeslagen via Cloudflare Cache API (persistent tussen requests)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-
-// Worker-level cache (geldig zolang deze Worker instantie leeft, ~30 sec tot enkele minuten)
-let _auth = null;
+const CACHE_KEY = 'https://portfolio-dashboard.internal/yfauth';
 
 export default {
   async fetch(request, env) {
@@ -28,67 +26,97 @@ export default {
   }
 };
 
-// ─── Crumb + cookie ophalen ───────────────────────────────────────────────────
-async function getAuth(forceRefresh = false) {
-  if (!forceRefresh && _auth) return _auth;
-
-  try {
-    // Stap 1: bezoek finance.yahoo.com en lees cookies
-    const r1 = await fetch('https://finance.yahoo.com', {
-      headers: {
-        'User-Agent': UA,
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-    });
-
-    // In Cloudflare Workers: set-cookie is één gecombineerde string
-    const setCookie = r1.headers.get('set-cookie') || '';
-    
-    // Parse cookies: splits op patroon ", naam=" want dat is het scheidingsteken
-    const cookieJar = {};
-    const parts = setCookie.split(/(?<=;)\s*(?=[A-Za-z_][A-Za-z0-9_]*=)/);
-    for (const part of parts) {
-      const [nameVal] = part.split(';');
-      const eqIdx = nameVal.indexOf('=');
-      if (eqIdx > 0) {
-        const name = nameVal.slice(0, eqIdx).trim();
-        const val  = nameVal.slice(eqIdx + 1).trim();
-        if (name) cookieJar[name] = val;
-      }
+// ─── Crumb opslaan/ophalen via Cloudflare Cache API ──────────────────────────
+async function saveAuth(crumb, cookie) {
+  const cache = caches.default;
+  const res = new Response(JSON.stringify({ crumb, cookie }), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'public, max-age=3600', // 1 uur
     }
-    
-    // Fallback: lees ook cookies uit de response body URL (soms redirect)
-    const cookieStr = Object.entries(cookieJar)
-      .map(([k, v]) => `${k}=${v}`)
-      .join('; ') || setCookie.split(';')[0];
+  });
+  await cache.put(CACHE_KEY, res);
+}
 
-    // Stap 2: haal crumb op
-    const r2 = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
-      headers: {
-        'User-Agent': UA,
-        'Accept': '*/*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cookie': cookieStr,
-        'Referer': 'https://finance.yahoo.com/',
-        'Origin': 'https://finance.yahoo.com',
-      },
-    });
-
-    if (!r2.ok) throw new Error(`getcrumb ${r2.status}`);
-
-    const crumb = (await r2.text()).trim();
-    if (!crumb || crumb.includes('<') || crumb === 'null') {
-      throw new Error('Ongeldige crumb ontvangen');
-    }
-
-    _auth = { crumb, cookie: cookieStr };
-    return _auth;
-
-  } catch (e) {
-    console.error('Auth fout:', e.message);
-    return { crumb: null, cookie: '' };
+async function loadAuth() {
+  const cache = caches.default;
+  const cached = await cache.match(CACHE_KEY);
+  if (cached) {
+    try {
+      return await cached.json();
+    } catch (_) {}
   }
+  return null;
+}
+
+// ─── Cookie + Crumb ophalen van Yahoo Finance ─────────────────────────────────
+async function fetchFreshAuth() {
+  // Stap 1: haal cookies op van Yahoo Finance
+  const r1 = await fetch('https://finance.yahoo.com', {
+    headers: {
+      'User-Agent': UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+    },
+    redirect: 'follow',
+  });
+
+  // Lees set-cookie header — in Workers is dit één string
+  const setCookieHeader = r1.headers.get('set-cookie') || '';
+  
+  // Extraheer naam=waarde paren (voor het eerste ; van elke cookie)
+  // Cookies worden gescheiden door ", " maar alleen als er een nieuwe naam volgt
+  const cookieMap = {};
+  // Splits op ", " gevolgd door een cookie naam (letters/cijfers/underscore gevolgd door =)
+  const cookieParts = setCookieHeader.split(/,\s*(?=[a-zA-Z0-9_\-]+=)/);
+  for (const part of cookieParts) {
+    const nameVal = part.split(';')[0].trim();
+    const eqIdx = nameVal.indexOf('=');
+    if (eqIdx > 0) {
+      const name = nameVal.slice(0, eqIdx).trim();
+      const val  = nameVal.slice(eqIdx + 1).trim();
+      if (name) cookieMap[name] = val;
+    }
+  }
+  const cookieStr = Object.entries(cookieMap).map(([k,v]) => `${k}=${v}`).join('; ');
+
+  // Stap 2: haal crumb op met de cookies
+  const r2 = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+    headers: {
+      'User-Agent': UA,
+      'Accept': '*/*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://finance.yahoo.com/',
+      'Origin': 'https://finance.yahoo.com',
+      'Cookie': cookieStr,
+    },
+  });
+
+  if (!r2.ok) throw new Error(`getcrumb HTTP ${r2.status}`);
+  
+  const crumb = (await r2.text()).trim();
+  if (!crumb || crumb.length < 2 || crumb.includes('<') || crumb === 'null') {
+    throw new Error(`Ongeldige crumb: "${crumb}"`);
+  }
+
+  return { crumb, cookie: cookieStr };
+}
+
+// ─── Haal auth op (uit cache of vers) ────────────────────────────────────────
+async function getAuth(forceRefresh = false) {
+  if (!forceRefresh) {
+    const cached = await loadAuth();
+    if (cached?.crumb && cached?.cookie) {
+      return cached;
+    }
+  }
+
+  const auth = await fetchFreshAuth();
+  await saveAuth(auth.crumb, auth.cookie);
+  return auth;
 }
 
 // ─── Proxy handler ────────────────────────────────────────────────────────────
@@ -104,16 +132,19 @@ async function handleProxy(url) {
     if (k !== 'endpoint') params.set(k, v);
   }
 
-  // v10: voeg crumb toe
   let cookie = '';
   if (isV10) {
-    const auth = await getAuth();
-    if (auth.crumb) params.set('crumb', auth.crumb);
-    cookie = auth.cookie;
+    try {
+      const auth = await getAuth();
+      if (auth.crumb) params.set('crumb', auth.crumb);
+      cookie = auth.cookie;
+    } catch (e) {
+      console.error('Auth fout:', e.message);
+    }
   }
 
-  const doFetch = async (extraCookie) => {
-    const qs  = params.size ? '?' + params.toString() : '';
+  const doRequest = async (ck) => {
+    const qs = params.size ? '?' + params.toString() : '';
     const hdrs = {
       'User-Agent': UA,
       'Accept': 'application/json, text/plain, */*',
@@ -121,8 +152,7 @@ async function handleProxy(url) {
       'Referer': 'https://finance.yahoo.com/',
       'Origin': 'https://finance.yahoo.com',
     };
-    if (extraCookie) hdrs['Cookie'] = extraCookie;
-
+    if (ck) hdrs['Cookie'] = ck;
     return fetch(`https://${host}/${endpoint}${qs}`, {
       headers: hdrs,
       cf: { cacheTtl: isV10 ? 3600 : 300, cacheEverything: !isV10 }
@@ -130,14 +160,17 @@ async function handleProxy(url) {
   };
 
   try {
-    let res = await doFetch(cookie);
+    let res = await doRequest(cookie);
 
-    // Bij 401: ververs auth en probeer opnieuw
+    // 401 → ververs crumb en retry
     if (res.status === 401 && isV10) {
-      _auth = null;
-      const auth2 = await getAuth(true);
-      if (auth2.crumb) params.set('crumb', auth2.crumb);
-      res = await doFetch(auth2.cookie);
+      try {
+        const auth2 = await getAuth(true); // force refresh
+        params.set('crumb', auth2.crumb);
+        res = await doRequest(auth2.cookie);
+      } catch (e) {
+        console.error('Retry auth fout:', e.message);
+      }
     }
 
     if (!res.ok) return jsonResponse({ error: `Yahoo Finance ${res.status}` }, res.status);
