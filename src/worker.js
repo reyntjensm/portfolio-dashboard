@@ -1,11 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// src/worker.js — Cloudflare Worker: Yahoo Finance CORS Proxy
-// Deploy: kopieer deze code naar je Worker in dash.cloudflare.com
-//         Workers & Pages → portfolio-dashboard → Edit Code → Deploy
+// src/worker.js — Cloudflare Worker
+// Serveert de volledige dashboard applicatie + Yahoo Finance proxy
+// Automatisch gedeployd vanuit GitHub via Cloudflare
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// index.html en data.js worden ingeladen via Cloudflare Assets (Static Files).
+// Zorg dat in je Cloudflare Worker instellingen "Assets" is geconfigureerd,
+// of gebruik onderstaande aanpak waarbij de Worker de bestanden via fetch ophaalt.
+
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
 
     // CORS preflight
@@ -18,28 +22,41 @@ export default {
       return handleProxy(url);
     }
 
-    // Alle andere routes
-    return new Response('Portfolio Worker OK', {
-      headers: { 'Content-Type': 'text/plain', ...corsHeaders() }
-    });
+    // Route: /src/data.js → serveer data.js
+    if (url.pathname === '/src/data.js') {
+      return serveAsset(env, 'src/data.js', 'application/javascript');
+    }
+
+    // Route: / of alles anders → serveer index.html
+    return serveAsset(env, 'index.html', 'text/html;charset=UTF-8');
   }
 };
 
+// Serveert een statisch bestand via Cloudflare Assets binding
+async function serveAsset(env, path, contentType) {
+  // Cloudflare Workers Static Assets: env.ASSETS
+  if (env.ASSETS) {
+    const asset = await env.ASSETS.fetch(new Request(`https://assets/${path}`));
+    if (asset.ok) {
+      return new Response(asset.body, {
+        headers: { 'Content-Type': contentType, 'Cache-Control': 'no-cache' }
+      });
+    }
+  }
+  return new Response('Bestand niet gevonden: ' + path, { status: 404 });
+}
+
 async function handleProxy(url) {
-  // endpoint param bevat het volledige Yahoo Finance pad
-  // bv: endpoint=v8/finance/chart/AAPL&interval=1d&range=1d
   const endpoint = url.searchParams.get('endpoint');
   if (!endpoint) {
     return jsonResponse({ error: 'Ontbrekende parameter: endpoint' }, 400);
   }
 
-  // Bouw query params op — alles behalve 'endpoint' zelf
   const params = new URLSearchParams();
   for (const [k, v] of url.searchParams) {
     if (k !== 'endpoint') params.set(k, v);
   }
 
-  // v10 en v11 endpoints → query2, de rest → query1
   const host = /^v1[01]\//.test(endpoint)
     ? 'query2.finance.yahoo.com'
     : 'query1.finance.yahoo.com';
@@ -69,7 +86,6 @@ async function handleProxy(url) {
         ...corsHeaders()
       }
     });
-
   } catch (err) {
     return jsonResponse({ error: err.message }, 500);
   }
