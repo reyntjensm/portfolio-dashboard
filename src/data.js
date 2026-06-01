@@ -410,6 +410,111 @@ Genereer 3-4 items in het Nederlands.`,
   }
 }
 
+
+// ─── ALPHA VANTAGE: NIEUWS PER AANDEEL ───────────────────────────────────────
+// Gratis endpoint — telt mee voor de 25 calls/dag limiet
+async function avNews(ticker) {
+  const lsKey  = 'av_news_' + ticker;
+  const memKey = 'anews_' + ticker;
+
+  const memCached = memGet(memKey);
+  if (memCached) return memCached;
+
+  const lsCached = lsGet(lsKey);
+  if (lsCached) { memSet(memKey, lsCached, 60 * 60 * 1000); return lsCached; }
+
+  if (avLimitReached()) return null;
+
+  const avSym = AV_SYM_MAP[ticker] || ticker;
+  const url   = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${encodeURIComponent(avSym)}&limit=4&apikey=${AV_KEY}`;
+
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) return null;
+    const d = await res.json();
+
+    if (d.Note || d.Information) {
+      localStorage.setItem('pf_av_calls', JSON.stringify({ date: new Date().toDateString(), count: AV_MAX_DAY }));
+      showAvLimitWarning();
+      return null;
+    }
+
+    avIncrementCalls();
+
+    const items = (d.feed || []).slice(0, 4).map(item => {
+      const score = parseFloat(item.overall_sentiment_score || '0');
+      const badge = score > 0.15 ? 'nb-cat' : score < -0.15 ? 'nb-risk' : 'nb-corp';
+      const bl    = item.topics?.[0]?.topic
+        ? item.topics[0].topic.toUpperCase().replace(/_/g, ' ')
+        : 'NIEUWS';
+      const date  = item.time_published
+        ? new Date(item.time_published.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$3/$2/$1')).toLocaleDateString('nl-BE', {day:'numeric',month:'short',year:'numeric'})
+        : '';
+      return {
+        badge,
+        bl: bl + ' · ' + (item.source || ''),
+        date,
+        time: '',
+        title: item.title || '',
+        body:  item.summary || '',
+        url:   item.url || '',
+      };
+    });
+
+    if (items.length) {
+      lsSet(lsKey, items, 6 * 60 * 60 * 1000); // 6u cache
+      memSet(memKey, items, 60 * 60 * 1000);
+      return items;
+    }
+    return null;
+  } catch(e) {
+    console.warn(`AV nieuws fout voor ${ticker}:`, e.message);
+    return null;
+  }
+}
+
+// ─── ALPHA VANTAGE: EARNINGS DATUM ───────────────────────────────────────────
+async function avEarnings(ticker) {
+  const lsKey = 'av_earn_' + ticker;
+  const cached = lsGet(lsKey);
+  if (cached) return cached;
+
+  if (avLimitReached()) return null;
+
+  const avSym = AV_SYM_MAP[ticker] || ticker;
+  const url   = `https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&symbol=${encodeURIComponent(avSym)}&horizon=3month&apikey=${AV_KEY}`;
+
+  try {
+    const res  = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const text = await res.text();
+    if (text.includes('Note') || text.includes('Information')) {
+      localStorage.setItem('pf_av_calls', JSON.stringify({ date: new Date().toDateString(), count: AV_MAX_DAY }));
+      showAvLimitWarning();
+      return null;
+    }
+
+    avIncrementCalls();
+
+    // CSV formaat: symbol,name,reportDate,fiscalDateEnding,estimate,currency
+    const lines = text.trim().split('\n').slice(1); // sla header over
+    for (const line of lines) {
+      const parts = line.split(',');
+      if (parts[0] === avSym && parts[2]) {
+        const date = new Date(parts[2]);
+        const formatted = date.toLocaleDateString('nl-BE', { day:'numeric', month:'long', year:'numeric' });
+        const result = { date: formatted, raw: parts[2] };
+        lsSet(lsKey, result, 24 * 60 * 60 * 1000);
+        return result;
+      }
+    }
+    return null;
+  } catch(e) {
+    console.warn(`AV earnings fout voor ${ticker}:`, e.message);
+    return null;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // OVERRIDES — vervangen de originele functies uit index.html
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -499,6 +604,14 @@ async function fetchAnalystData(ticker) {
 
   analystCache[ticker] = result;
 
+  // Haal earnings datum op en update 'next' veld
+  avEarnings(ticker).then(earn => {
+    if (earn && STOCKS[ticker]) {
+      STOCKS[ticker].next = 'Earnings ' + earn.date;
+      STOCKS[ticker].nextIcon = '📋';
+    }
+  });
+
   // Re-render als actief
   if (typeof activeStock !== 'undefined' && activeStock === ticker &&
       typeof activePage  !== 'undefined' && activePage  === 'detail' &&
@@ -521,9 +634,16 @@ async function fetchAnalystData(ticker) {
   return result;
 }
 
-// Vervangt fetchNewsForTicker
+// Vervangt fetchNewsForTicker — haalt nieuws via Alpha Vantage
 async function fetchNewsForTicker(ticker) {
   if (newsCache[ticker]) return newsCache[ticker];
+
+  // Probeer Alpha Vantage nieuws
+  const news = await avNews(ticker);
+  if (news?.length) {
+    newsCache[ticker] = { items: news, _isAV: true };
+    return newsCache[ticker];
+  }
   return null;
 }
 
