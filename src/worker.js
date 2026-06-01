@@ -1,11 +1,13 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // src/worker.js — Cloudflare Worker
-// Serveert dashboard + Yahoo Finance proxy met crumb authenticatie
+// Serveert dashboard + Yahoo Finance proxy met werkende cookie/crumb auth
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Crumb cache — Yahoo Finance vereist een cookie+crumb voor v10 endpoints
-let yfCrumb   = null;
-let yfCookies = null;
+// Cache crumb en cookie in Worker memory (blijft per Worker instantie)
+let _crumb   = null;
+let _cookie  = null;
+let _crumbTs = 0;
+const CRUMB_TTL = 60 * 60 * 1000; // 1 uur
 
 export default {
   async fetch(request, env) {
@@ -27,106 +29,147 @@ export default {
   }
 };
 
-// ─── Haal Yahoo Finance crumb + cookie op ─────────────────────────────────────
-async function getYFCrumb() {
-  if (yfCrumb && yfCookies) return { crumb: yfCrumb, cookies: yfCookies };
+// ─── Cookie + Crumb ophalen ───────────────────────────────────────────────────
+async function getCrumb() {
+  // Hergebruik als nog geldig
+  if (_crumb && _cookie && Date.now() - _crumbTs < CRUMB_TTL) {
+    return { crumb: _crumb, cookie: _cookie };
+  }
 
-  // Stap 1: haal cookies op via consent pagina
-  const consentRes = await fetch('https://fc.yahoo.com', {
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+  // Stap 1: bezoek Yahoo Finance homepage om initiële cookies te krijgen
+  const homeRes = await fetch('https://finance.yahoo.com/', {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml',
+      'User-Agent': UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
     },
     redirect: 'follow',
   });
-  const cookies = consentRes.headers.get('set-cookie') || '';
+
+  // Verzamel alle cookies
+  const setCookies = homeRes.headers.getAll ? homeRes.headers.getAll('set-cookie') : [];
+  let cookieStr = setCookies
+    .map(c => c.split(';')[0])
+    .filter(c => c.includes('='))
+    .join('; ');
 
   // Stap 2: haal crumb op
   const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'User-Agent': UA,
       'Accept': '*/*',
-      'Cookie': cookies,
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Cookie': cookieStr,
       'Referer': 'https://finance.yahoo.com/',
+      'Origin': 'https://finance.yahoo.com',
     },
   });
 
   if (crumbRes.ok) {
-    const crumb = await crumbRes.text();
-    if (crumb && crumb !== 'null' && !crumb.includes('<')) {
-      yfCrumb   = crumb.trim();
-      yfCookies = cookies;
-      return { crumb: yfCrumb, cookies: yfCookies };
+    const crumb = (await crumbRes.text()).trim();
+    if (crumb && crumb.length > 0 && !crumb.includes('<') && crumb !== 'null') {
+      _crumb   = crumb;
+      _cookie  = cookieStr;
+      _crumbTs = Date.now();
+      return { crumb, cookie: cookieStr };
     }
   }
 
-  return { crumb: null, cookies };
+  // Stap 3: fallback — probeer via consent endpoint
+  const consentRes = await fetch('https://guce.yahoo.com/consent?brandType=nonEu&lang=en-US&done=https%3A%2F%2Ffinance.yahoo.com%2F', {
+    headers: { 'User-Agent': UA, 'Accept': 'text/html' },
+    redirect: 'follow',
+  });
+  const consentCookies = (consentRes.headers.getAll ? consentRes.headers.getAll('set-cookie') : [])
+    .map(c => c.split(';')[0])
+    .filter(c => c.includes('='))
+    .join('; ');
+
+  const allCookies = [cookieStr, consentCookies].filter(Boolean).join('; ');
+
+  const crumbRes2 = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+    headers: {
+      'User-Agent': UA,
+      'Accept': '*/*',
+      'Cookie': allCookies,
+      'Referer': 'https://finance.yahoo.com/',
+    },
+  });
+
+  if (crumbRes2.ok) {
+    const crumb2 = (await crumbRes2.text()).trim();
+    if (crumb2 && crumb2.length > 0 && !crumb2.includes('<') && crumb2 !== 'null') {
+      _crumb   = crumb2;
+      _cookie  = allCookies;
+      _crumbTs = Date.now();
+      return { crumb: crumb2, cookie: allCookies };
+    }
+  }
+
+  return { crumb: null, cookie: allCookies };
 }
 
+// ─── Proxy handler ────────────────────────────────────────────────────────────
 async function handleProxy(url) {
   const endpoint = url.searchParams.get('endpoint');
   if (!endpoint) {
     return jsonResponse({ error: 'Ontbrekende parameter: endpoint' }, 400);
   }
 
-  // Bouw extra query params op (alles behalve 'endpoint')
+  const isV10 = endpoint.startsWith('v10/') || endpoint.startsWith('v11/');
+  const host  = isV10 ? 'query2.finance.yahoo.com' : 'query1.finance.yahoo.com';
+
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+  // Bouw query params op
   const params = new URLSearchParams();
   for (const [k, v] of url.searchParams) {
     if (k !== 'endpoint') params.set(k, v);
   }
 
-  const isV10 = endpoint.startsWith('v10/') || endpoint.startsWith('v11/');
-  const host  = isV10 ? 'query2.finance.yahoo.com' : 'query1.finance.yahoo.com';
-
-  // Voor v10 endpoints: voeg crumb toe
-  let cookies = '';
+  // Voor v10: voeg crumb toe
+  let cookie = '';
   if (isV10) {
     try {
-      const auth = await getYFCrumb();
+      const auth = await getCrumb();
       if (auth.crumb) params.set('crumb', auth.crumb);
-      cookies = auth.cookies || '';
+      cookie = auth.cookie || '';
     } catch (e) {
-      console.error('Crumb ophalen mislukt:', e.message);
+      console.error('Crumb fout:', e.message);
     }
   }
 
-  const qs     = params.size ? '?' + params.toString() : '';
-  const yfUrl  = `https://${host}/${endpoint}${qs}`;
+  const qs    = params.size ? '?' + params.toString() : '';
+  const yfUrl = `https://${host}/${endpoint}${qs}`;
+
+  const headers = {
+    'User-Agent':      UA,
+    'Accept':          'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer':         'https://finance.yahoo.com/',
+    'Origin':          'https://finance.yahoo.com',
+  };
+  if (cookie) headers['Cookie'] = cookie;
 
   try {
-    const headers = {
-      'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept':          'application/json',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Referer':         'https://finance.yahoo.com/',
-      'Origin':          'https://finance.yahoo.com',
-    };
-    if (cookies) headers['Cookie'] = cookies;
-
-    const res = await fetch(yfUrl, {
+    let res = await fetch(yfUrl, {
       headers,
-      cf: { cacheTtl: isV10 ? 3600 : 300, cacheEverything: true }
+      cf: { cacheTtl: isV10 ? 3600 : 300, cacheEverything: !isV10 }
     });
 
-    // Bij 401: reset crumb en probeer opnieuw
+    // Bij 401: reset crumb en retry
     if (res.status === 401 && isV10) {
-      yfCrumb = null;
-      yfCookies = null;
+      _crumb = null; _cookie = null; _crumbTs = 0;
       try {
-        const auth2 = await getYFCrumb();
-        const params2 = new URLSearchParams(params);
-        if (auth2.crumb) params2.set('crumb', auth2.crumb);
-        const qs2 = params2.size ? '?' + params2.toString() : '';
-        const res2 = await fetch(`https://${host}/${endpoint}${qs2}`, {
-          headers: { ...headers, 'Cookie': auth2.cookies || '' },
-        });
-        if (res2.ok) {
-          const data2 = await res2.json();
-          return new Response(JSON.stringify(data2), {
-            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600', ...corsHeaders() }
-          });
-        }
-      } catch (e2) { /* geef originele fout terug */ }
+        const auth2 = await getCrumb();
+        const p2 = new URLSearchParams(params);
+        if (auth2.crumb) p2.set('crumb', auth2.crumb);
+        const headers2 = { ...headers };
+        if (auth2.cookie) headers2['Cookie'] = auth2.cookie;
+        res = await fetch(`https://${host}/${endpoint}?${p2.toString()}`, { headers: headers2 });
+      } catch (e) { /* val door naar originele response */ }
     }
 
     if (!res.ok) {

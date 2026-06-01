@@ -372,6 +372,7 @@ async function fetchAnalystData(ticker) {
   return result;
 }
 
+
 async function fetchNewsForTicker(ticker) {
   if (newsCache[ticker]) return newsCache[ticker];
   return null;
