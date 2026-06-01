@@ -71,7 +71,13 @@ function avCallsToday() {
     if (!raw) return 0;
     const e = JSON.parse(raw);
     const today = new Date().toDateString();
-    if (e.date !== today) return 0;
+    if (e.date !== today) {
+      // Nieuwe dag — reset teller en verwijder badge
+      localStorage.removeItem('pf_av_calls');
+      const badge = document.getElementById('av-limit-badge');
+      if (badge) badge.remove();
+      return 0;
+    }
     return e.count || 0;
   } catch(_) { return 0; }
 }
@@ -135,10 +141,10 @@ function showAvLimitWarning() {
   updateAvBadge(AV_MAX_DAY);
 }
 
-// Initialiseer badge bij laden
+// Initialiseer badge bij laden — enkel als limiet bereikt of bijna bereikt
 document.addEventListener('DOMContentLoaded', () => {
   const used = avCallsToday();
-  if (used > 0) updateAvBadge(used);
+  if (used >= AV_MAX_DAY) updateAvBadge(used); // enkel tonen bij limiet
 });
 
 // ─── YAHOO FINANCE: REALTIME KOERS ───────────────────────────────────────────
