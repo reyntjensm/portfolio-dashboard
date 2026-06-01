@@ -1842,12 +1842,25 @@ function hashPin(pin) {
   return 'ph_' + Math.abs(h).toString(36) + pin.length;
 }
 
-// Laad PIN hash vanuit Supabase (of localStorage als fallback)
+// Laad PIN hash vanuit localStorage (instant) + Supabase op achtergrond
 async function loadPinHash() {
-  // Probeer eerst localStorage (instant, geen network)
+  // Eerst localStorage — dit is altijd instant en betrouwbaar
   const local = localStorage.getItem('pf_pin_hash');
+  if (local) {
+    pinHashStored = local;
+    // Supabase sync op achtergrond (niet blokkerend)
+    sbGet('app_settings', 'select=value&key=eq.pin_hash')
+      .then(data => {
+        if (data && data.length > 0 && data[0].value !== local) {
+          pinHashStored = data[0].value;
+          localStorage.setItem('pf_pin_hash', pinHashStored);
+        }
+      })
+      .catch(() => {});
+    return local;
+  }
 
-  // Dan Supabase op de achtergrond (als de tabel bestaat)
+  // Geen lokale hash — probeer Supabase
   try {
     const data = await sbGet('app_settings', 'select=value&key=eq.pin_hash');
     if (data && data.length > 0) {
@@ -1856,9 +1869,9 @@ async function loadPinHash() {
       return pinHashStored;
     }
   } catch(e) {
-    // app_settings tabel bestaat nog niet — gebruik localStorage
+    // Supabase niet beschikbaar
   }
-  return local || null;
+  return null;
 }
 
 async function savePinHash(hash) {
