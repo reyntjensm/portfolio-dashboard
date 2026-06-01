@@ -1,50 +1,29 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // src/worker.js — Cloudflare Worker
-// Serveert de volledige dashboard applicatie + Yahoo Finance proxy
-// Automatisch gedeployd vanuit GitHub via Cloudflare
+// Serveert dashboard + Yahoo Finance proxy
 // ═══════════════════════════════════════════════════════════════════════════════
-
-// index.html en data.js worden ingeladen via Cloudflare Assets (Static Files).
-// Zorg dat in je Cloudflare Worker instellingen "Assets" is geconfigureerd,
-// of gebruik onderstaande aanpak waarbij de Worker de bestanden via fetch ophaalt.
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders() });
     }
 
-    // Route: /yf → Yahoo Finance proxy
+    // /yf → Yahoo Finance proxy
     if (url.pathname.startsWith('/yf')) {
       return handleProxy(url);
     }
 
-    // Route: /src/data.js → serveer data.js
-    if (url.pathname === '/src/data.js') {
-      return serveAsset(env, 'src/data.js', 'application/javascript');
+    // Alles anders → statische assets (index.html, src/data.js, ...)
+    if (env.ASSETS) {
+      return env.ASSETS.fetch(request);
     }
 
-    // Route: / of alles anders → serveer index.html
-    return serveAsset(env, 'index.html', 'text/html;charset=UTF-8');
+    return new Response('Portfolio Worker OK', { headers: corsHeaders() });
   }
 };
-
-// Serveert een statisch bestand via Cloudflare Assets binding
-async function serveAsset(env, path, contentType) {
-  // Cloudflare Workers Static Assets: env.ASSETS
-  if (env.ASSETS) {
-    const asset = await env.ASSETS.fetch(new Request(`https://assets/${path}`));
-    if (asset.ok) {
-      return new Response(asset.body, {
-        headers: { 'Content-Type': contentType, 'Cache-Control': 'no-cache' }
-      });
-    }
-  }
-  return new Response('Bestand niet gevonden: ' + path, { status: 404 });
-}
 
 async function handleProxy(url) {
   const endpoint = url.searchParams.get('endpoint');
@@ -52,30 +31,34 @@ async function handleProxy(url) {
     return jsonResponse({ error: 'Ontbrekende parameter: endpoint' }, 400);
   }
 
+  // Bouw extra query params op (alles behalve 'endpoint')
   const params = new URLSearchParams();
   for (const [k, v] of url.searchParams) {
     if (k !== 'endpoint') params.set(k, v);
   }
+  const qs = params.size ? '?' + params.toString() : '';
 
-  const host = /^v1[01]\//.test(endpoint)
+  // v10 en v11 → query2, alle andere → query1
+  const host = endpoint.startsWith('v10/') || endpoint.startsWith('v11/')
     ? 'query2.finance.yahoo.com'
     : 'query1.finance.yahoo.com';
 
-  const yfUrl = `https://${host}/${endpoint}${params.size ? '?' + params.toString() : ''}`;
+  const yfUrl = `https://${host}/${endpoint}${qs}`;
 
   try {
     const res = await fetch(yfUrl, {
       headers: {
-        'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'User-Agent':      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept':          'application/json',
         'Accept-Language': 'en-US,en;q=0.9',
         'Referer':         'https://finance.yahoo.com/',
+        'Origin':          'https://finance.yahoo.com',
       },
       cf: { cacheTtl: 300, cacheEverything: true }
     });
 
     if (!res.ok) {
-      return jsonResponse({ error: `Yahoo Finance antwoordde ${res.status}` }, res.status);
+      return jsonResponse({ error: `Yahoo Finance ${res.status}` }, res.status);
     }
 
     const data = await res.json();

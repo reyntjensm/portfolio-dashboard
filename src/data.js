@@ -1,22 +1,20 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // src/data.js — Live data via Yahoo Finance + AI nieuws via Anthropic
 // Vervangt alle Alpha Vantage en Finnhub calls uit index.html.
-// Wordt geladen via <script src="src/data.js"></script> onderaan index.html.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── CONFIGURATIE ─────────────────────────────────────────────────────────────
 const YF_WORKER = 'https://portfolio-dashboard.michiel-0be.workers.dev/yf';
 
 // Yahoo Finance ticker mapping (portfolio ticker → YF ticker)
+// Let op: ACKB → ACKB.BR (niet AKA.BR), GOOGL → GOOG
 const YF_SYM_MAP = {
   AAPL:  'AAPL',
-  GOOGL: 'GOOGL',
-  ACKB:  'AKA.BR',
+  GOOGL: 'GOOG',
+  ACKB:  'ACKB.BR',
   SOF:   'SOF.BR',
   IFX:   'IFX.DE',
-  // Extra tickers via ➕ werken automatisch voor US aandelen.
-  // Europese aandelen moet je hier toevoegen:
-  // KBC:  'KBC.BR', UCB: 'UCB.BR', ASML: 'ASML.AS', SAP: 'SAP.DE'
+  // Extra Europese tickers: voeg hier toe indien nodig
+  // KBC: 'KBC.BR', UCB: 'UCB.BR', ASML: 'ASML.AS', SAP: 'SAP.DE'
 };
 
 // Yahoo Finance periodes voor grafieken
@@ -41,22 +39,14 @@ function dcGet(k) {
 }
 function dcSet(k, v, ttl) { _dc[k] = { v, ts: Date.now(), ttl }; }
 
-// ─── HELPER: fetch via Worker met fallback naar allorigins ────────────────────
-async function yfFetch(path, useQuery2 = false) {
-  const workerUrl = `${YF_WORKER}?endpoint=${useQuery2 ? 'v10' : 'v8'}${path}`;
-
-  // Eerste poging via eigen Worker
-  try {
-    const r = await fetch(workerUrl, { signal: AbortSignal.timeout(10000) });
-    if (r.ok) return r.json();
-  } catch (_) {}
-
-  // Fallback: allorigins.win publieke CORS proxy
-  const host = useQuery2 ? 'query2.finance.yahoo.com' : 'query1.finance.yahoo.com';
-  const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://' + host + path)}`;
-  const r2 = await fetch(fallback, { signal: AbortSignal.timeout(12000) });
-  if (!r2.ok) throw new Error(`Yahoo Finance niet bereikbaar (${r2.status})`);
-  return r2.json();
+// ─── HELPER: fetch via Worker ─────────────────────────────────────────────────
+// Alle requests gaan via onze eigen Worker — geen externe CORS proxies meer
+async function yfFetch(endpoint, extraParams = {}) {
+  const params = new URLSearchParams({ endpoint, ...extraParams });
+  const url = `${YF_WORKER}?${params.toString()}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+  if (!res.ok) throw new Error(`Worker fout ${res.status} voor ${endpoint}`);
+  return res.json();
 }
 
 // ─── YAHOO FINANCE: REALTIME KOERS ───────────────────────────────────────────
@@ -65,18 +55,10 @@ async function yfQuote(yfSym) {
   const cached = dcGet(key);
   if (cached) return cached;
 
-  const url = `${YF_WORKER}?endpoint=v8/finance/chart/${encodeURIComponent(yfSym)}&interval=1d&range=1d`;
-  const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${yfSym}?interval=1d&range=1d`
-  )}`;
-
-  let json = null;
-  for (const u of [url, fallback]) {
-    try {
-      const r = await fetch(u, { signal: AbortSignal.timeout(10000) });
-      if (r.ok) { json = await r.json(); break; }
-    } catch (_) {}
-  }
+  const json = await yfFetch(`v8/finance/chart/${encodeURIComponent(yfSym)}`, {
+    interval: '1d',
+    range: '1d'
+  });
 
   const result = json?.chart?.result?.[0];
   if (!result) throw new Error(`Geen quote data voor ${yfSym}`);
@@ -106,7 +88,7 @@ async function yfQuote(yfSym) {
     error: null,
   };
 
-  dcSet(key, out, 5 * 60 * 1000); // 5 min cache
+  dcSet(key, out, 5 * 60 * 1000);
   return out;
 }
 
@@ -117,19 +99,10 @@ async function yfHistory(yfSym, period) {
   if (cached) return cached;
 
   const cfg = YF_HIST_CFG[period] || YF_HIST_CFG['1J'];
-  const yfPath = `/v8/finance/chart/${encodeURIComponent(yfSym)}?range=${cfg.range}&interval=${cfg.interval}`;
-  const url = `${YF_WORKER}?endpoint=v8/finance/chart/${encodeURIComponent(yfSym)}&range=${cfg.range}&interval=${cfg.interval}`;
-  const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent(
-    `https://query1.finance.yahoo.com${yfPath}`
-  )}`;
-
-  let json = null;
-  for (const u of [url, fallback]) {
-    try {
-      const r = await fetch(u, { signal: AbortSignal.timeout(15000) });
-      if (r.ok) { json = await r.json(); break; }
-    } catch (_) {}
-  }
+  const json = await yfFetch(`v8/finance/chart/${encodeURIComponent(yfSym)}`, {
+    range: cfg.range,
+    interval: cfg.interval
+  });
 
   const result = json?.chart?.result?.[0];
   if (!result) throw new Error(`Geen historische data voor ${yfSym}`);
@@ -163,23 +136,11 @@ async function yfAnalyst(yfSym) {
   if (cached) return cached;
 
   const modules = 'recommendationTrend,upgradeDowngradeHistory,financialData,defaultKeyStatistics,summaryDetail';
-  const url = `${YF_WORKER}?endpoint=v10/finance/quoteSummary/${encodeURIComponent(yfSym)}&modules=${modules}`;
-  const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent(
-    `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${yfSym}?modules=${modules}`
-  )}`;
-
-  let json = null;
-  for (const u of [url, fallback]) {
-    try {
-      const r = await fetch(u, { signal: AbortSignal.timeout(12000) });
-      if (r.ok) { json = await r.json(); break; }
-    } catch (_) {}
-  }
+  const json = await yfFetch(`v10/finance/quoteSummary/${encodeURIComponent(yfSym)}`, { modules });
 
   const s = json?.quoteSummary?.result?.[0];
   if (!s) return null;
 
-  // Aanbevelingen
   const trend      = s.recommendationTrend?.trend?.[0] ?? {};
   const strongBuy  = trend.strongBuy  ?? 0;
   const buy        = trend.buy        ?? 0;
@@ -196,14 +157,12 @@ async function yfAnalyst(yfSym) {
     recKey === 'sell'         ? 'Verkopen'       :
     total && (strongBuy + buy) / total > 0.55 ? 'Kopen' : 'Houden';
 
-  // Koersdoelen
   const fd         = s.financialData ?? {};
   const avgTarget  = fd.targetMeanPrice?.raw  ?? null;
   const highTarget = fd.targetHighPrice?.raw  ?? null;
   const lowTarget  = fd.targetLowPrice?.raw   ?? null;
   const curPrice   = fd.currentPrice?.raw     ?? null;
 
-  // Upgrades / downgrades (laatste 8)
   const upgrades = (s.upgradeDowngradeHistory?.history ?? [])
     .sort((a, b) => b.epochGradeDate - a.epochGradeDate)
     .slice(0, 8)
@@ -219,7 +178,6 @@ async function yfAnalyst(yfSym) {
         h.action === 'init' ? '▶ Initiatie'  : '→ Herbevestigd',
     }));
 
-  // Live ratios
   const ks = s.defaultKeyStatistics ?? {};
   const sd = s.summaryDetail        ?? {};
   const ratiosLive = {};
@@ -252,14 +210,11 @@ async function yfAnalyst(yfSym) {
     week52Low:  ks.fiftyTwoWeekLow?.raw  ?? null,
   };
 
-  dcSet(key, out, 6 * 60 * 60 * 1000); // 6u cache
+  dcSet(key, out, 6 * 60 * 60 * 1000);
   return out;
 }
 
 // ─── ANTHROPIC AI: ACTUEEL NIEUWS PER AANDEEL ────────────────────────────────
-// Stel eenmalig je API key in via de browser console op je dashboard:
-//   setAnthropicKey('sk-ant-api03-...')
-// Key aanmaken op: console.anthropic.com → API Keys
 function setAnthropicKey(key) {
   if (key?.startsWith('sk-ant-')) {
     localStorage.setItem('pf_ant_key', key);
@@ -310,14 +265,12 @@ Genereer 3 tot 4 items. Schrijf in het Nederlands.`,
     });
 
     if (!res.ok) { console.warn('Anthropic fout:', res.status); return null; }
-
     const data  = await res.json();
     const text  = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
     const clean = text.replace(/```json|```/g, '').trim();
     const news  = JSON.parse(clean).news ?? [];
-
     if (news.length) {
-      dcSet(key, news, 6 * 60 * 60 * 1000); // 6u cache
+      dcSet(key, news, 6 * 60 * 60 * 1000);
       return news;
     }
     return null;
@@ -329,34 +282,19 @@ Genereer 3 tot 4 items. Schrijf in het Nederlands.`,
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // OVERRIDES — vervangen de originele functies uit index.html
-// Exact dezelfde naam en return-waarde zodat de rest van index.html
-// zonder enige aanpassing blijft werken.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Vervangt fetchOneTicker (was Alpha Vantage + Finnhub)
 async function fetchOneTicker(origTicker) {
   const yfSym = YF_SYM_MAP[origTicker] || origTicker;
   try {
     const q = await yfQuote(yfSym);
     return {
-      price:       q.price,
-      chgAbs:      q.chgAbs,
-      chgPct:      q.chgPct,
-      prevClose:   q.prevClose,
-      dayHigh:     q.dayHigh,
-      dayLow:      q.dayLow,
-      wkHigh:      q.wkHigh,
-      wkLow:       q.wkLow,
-      currency:    q.currency,
-      name:        q.name,
-      exchange:    q.exchange,
-      mktCap:      q.mktCap,
-      pe:          null,
-      targetLow:   null,
-      targetMean:  null,
-      targetHigh:  null,
-      numAnalysts: null,
-      recKey:      null,
+      price: q.price, chgAbs: q.chgAbs, chgPct: q.chgPct,
+      prevClose: q.prevClose, dayHigh: q.dayHigh, dayLow: q.dayLow,
+      wkHigh: q.wkHigh, wkLow: q.wkLow, currency: q.currency,
+      name: q.name, exchange: q.exchange, mktCap: q.mktCap,
+      pe: null, targetLow: null, targetMean: null, targetHigh: null,
+      numAnalysts: null, recKey: null,
       strongBuy: 0, buy: 0, hold: 0, sell: 0, strongSell: 0,
     };
   } catch (e) {
@@ -364,13 +302,11 @@ async function fetchOneTicker(origTicker) {
   }
 }
 
-// Vervangt fetchHistory (was Alpha Vantage)
 async function fetchHistory(ticker, period) {
   const yfSym = YF_SYM_MAP[ticker] || ticker;
   return yfHistory(yfSym, period);
 }
 
-// Vervangt fetchAnalystData (was Finnhub + Alpha Vantage)
 async function fetchAnalystData(ticker) {
   if (analystCache[ticker]) return analystCache[ticker];
 
@@ -378,7 +314,6 @@ async function fetchAnalystData(ticker) {
   const data  = await yfAnalyst(yfSym);
   if (!data) return null;
 
-  // Patch STOCKS direct — zelfde gedrag als originele functie
   const s = STOCKS[ticker];
   if (s) {
     if (data.total > 0) {
@@ -399,33 +334,26 @@ async function fetchAnalystData(ticker) {
 
   const result = {
     analystSummary: {
-      buy:        data.buy + data.strongBuy,
-      hold:       data.hold,
-      sell:       data.sell + data.strongSell,
-      total:      data.total,
-      strongBuy:  data.strongBuy,
-      strongSell: data.strongSell,
-      consensus:  data.consensus,
+      buy: data.buy + data.strongBuy, hold: data.hold,
+      sell: data.sell + data.strongSell, total: data.total,
+      strongBuy: data.strongBuy, strongSell: data.strongSell,
+      consensus: data.consensus,
       avgTarget:  data.avgTarget  ? Math.round(data.avgTarget)  : null,
       highTarget: data.highTarget ? Math.round(data.highTarget) : null,
       lowTarget:  data.lowTarget  ? Math.round(data.lowTarget)  : null,
     },
     upgrades: data.upgrades,
     overview: {
-      pe:          data.pe,
-      forwardPE:   data.forwardPE,
-      beta:        data.beta,
-      divYield:    data.divYield,
-      roe:         data.roe,
+      pe: data.pe, forwardPE: data.forwardPE, beta: data.beta,
+      divYield: data.divYield, roe: data.roe,
       targetPrice: data.avgTarget,
-      week52High:  data.week52High,
-      week52Low:   data.week52Low,
+      week52High: data.week52High, week52Low: data.week52Low,
     },
   };
 
   analystCache[ticker] = result;
 
-  // AI nieuws ophalen op achtergrond — blokkeert de UI niet
+  // AI nieuws op achtergrond ophalen
   fetchAINews(ticker).then(news => {
     if (news?.length && STOCKS[ticker]) {
       newsCache[ticker] = { items: news, _isAI: true };
@@ -440,13 +368,11 @@ async function fetchAnalystData(ticker) {
   return result;
 }
 
-// Vervangt fetchNewsForTicker (was newsdata.io)
 async function fetchNewsForTicker(ticker) {
   if (newsCache[ticker]) return newsCache[ticker];
   return null;
 }
 
-// Vervangt fetchWlNews (was Finnhub)
 async function fetchWlNews(ticker) {
   if (wlNewsCache[ticker]) return wlNewsCache[ticker];
   return null;
