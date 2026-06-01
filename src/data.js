@@ -133,92 +133,96 @@ async function yfHistory(yfSym, period) {
   return candles;
 }
 
-// ─── YAHOO FINANCE: ANALYST CONSENSUS + RATIOS ───────────────────────────────
+// ─── YAHOO FINANCE: ANALYST CONSENSUS (v6 - geen crumb nodig) ───────────────
 async function yfAnalyst(yfSym) {
   const key = 'a_' + yfSym;
   const cached = dcGet(key);
   if (cached) return cached;
 
-  const modules = 'recommendationTrend,financialData,defaultKeyStatistics,summaryDetail';
-  const json = await yfFetch(`v10/finance/quoteSummary/${yfSym}`, { modules });
+  // v6/recommendationsBySymbol: geeft buy/hold/sell counts — geen crumb nodig
+  const recUrl = `${YF_WORKER}?endpoint=v6/finance/recommendationsBySymbol/${encodeURIComponent(yfSym)}`;
+  
+  // v8/finance/chart met modules=financials: geeft koersdoelen
+  const chartUrl = `${YF_WORKER}?endpoint=v8/finance/chart/${encodeURIComponent(yfSym)}&interval=1d&range=1d&modules=financialData`;
 
-  const s = json?.quoteSummary?.result?.[0];
-  if (!s) return null;
+  let recData  = null;
+  let chartData = null;
 
-  const trend      = s.recommendationTrend?.trend?.[0] ?? {};
-  const strongBuy  = trend.strongBuy  ?? 0;
-  const buy        = trend.buy        ?? 0;
-  const hold       = trend.hold       ?? 0;
-  const sell       = trend.sell       ?? 0;
-  const strongSell = trend.strongSell ?? 0;
-  const total      = strongBuy + buy + hold + sell + strongSell;
-  const recKey     = s.financialData?.recommendationKey ?? '';
-  const consensus  =
-    recKey === 'strong_buy'   ? 'Sterk Kopen'   :
-    recKey === 'buy'          ? 'Kopen'          :
-    recKey === 'hold'         ? 'Houden'         :
-    recKey === 'underperform' ? 'Onderpresteren' :
-    recKey === 'sell'         ? 'Verkopen'       :
-    total && (strongBuy + buy) / total > 0.55 ? 'Kopen' : 'Houden';
+  try {
+    const [r1, r2] = await Promise.allSettled([
+      fetch(recUrl,   { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : null),
+      fetch(chartUrl, { signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json() : null),
+    ]);
+    recData   = r1.status === 'fulfilled' ? r1.value : null;
+    chartData = r2.status === 'fulfilled' ? r2.value : null;
+  } catch(e) {
+    console.warn('yfAnalyst fetch fout:', e.message);
+  }
 
-  const fd         = s.financialData ?? {};
-  const avgTarget  = fd.targetMeanPrice?.raw  ?? null;
-  const highTarget = fd.targetHighPrice?.raw  ?? null;
-  const lowTarget  = fd.targetLowPrice?.raw   ?? null;
-  const curPrice   = fd.currentPrice?.raw     ?? null;
+  // Verwerk recommendationsBySymbol
+  // Response: { finance: { result: [{ symbol, recommendedSymbols, ... }] } }
+  // OF: { quoteSummary: { result: [{ recommendationTrend: { trend: [...] } }] } }
+  let buy = 0, hold = 0, sell = 0, total = 0, consensus = 'Kopen', recKey = '';
 
-  const upgrades = (s.upgradeDowngradeHistory?.history ?? [])
-    .sort((a, b) => b.epochGradeDate - a.epochGradeDate)
-    .slice(0, 8)
-    .map(h => ({
-      gradeDate: new Date(h.epochGradeDate * 1000).toISOString().split('T')[0],
-      firm:      h.firm,
-      action:    h.action,
-      fromGrade: h.fromGrade,
-      toGrade:   h.toGrade,
-      actionNl:
-        h.action === 'up'   ? '↑ Upgrade'   :
-        h.action === 'down' ? '↓ Downgrade' :
-        h.action === 'init' ? '▶ Initiatie'  : '→ Herbevestigd',
-      // sentiment veld dat refreshAnalystUI verwacht
-      sentiment:
-        h.action === 'up'   ? 'positive' :
-        h.action === 'down' ? 'negative' : 'neutral',
-    }));
+  const finResult = recData?.finance?.result?.[0];
+  if (finResult?.recommendationTrend) {
+    const trend = finResult.recommendationTrend.trend?.[0] ?? {};
+    buy  = (trend.strongBuy ?? 0) + (trend.buy ?? 0);
+    hold = trend.hold ?? 0;
+    sell = (trend.strongSell ?? 0) + (trend.sell ?? 0);
+    total = buy + hold + sell;
+  }
 
-  const ks = s.defaultKeyStatistics ?? {};
-  const sd = s.summaryDetail        ?? {};
-  const ratiosLive = {};
-  if (curPrice && ks.trailingEps?.raw)
-    ratiosLive['P/E (TTM)']     = (curPrice / ks.trailingEps.raw).toFixed(1) + '×';
-  if (ks.forwardPE?.fmt)          ratiosLive['P/E Fwd']       = ks.forwardPE.fmt;
-  if (ks.enterpriseToEbitda?.fmt) ratiosLive['EV/EBITDA']     = ks.enterpriseToEbitda.fmt;
-  if (ks.priceToSalesTrailing12Months?.fmt)
-                                  ratiosLive['P/S']           = ks.priceToSalesTrailing12Months.fmt;
-  if (fd.grossMargins?.fmt)       ratiosLive['Brutomarge']    = fd.grossMargins.fmt;
-  if (fd.operatingMargins?.fmt)   ratiosLive['Bedrijfsmarge'] = fd.operatingMargins.fmt;
-  if (fd.returnOnEquity?.fmt)     ratiosLive['ROE']           = fd.returnOnEquity.fmt;
-  if (ks.beta?.fmt)               ratiosLive['Beta']          = ks.beta.fmt;
-  if (sd.dividendYield?.fmt)      ratiosLive['Div. Yield']    = sd.dividendYield.fmt;
-  if (ks.marketCap?.fmt)          ratiosLive['Mktcap']        = ks.marketCap.fmt;
-  if (ks.debtToEquity?.fmt)       ratiosLive['Schuld/EV']     = ks.debtToEquity.fmt;
-  if (ks.fiftyTwoWeekHigh?.raw)   ratiosLive['52w Hoog']      = String(ks.fiftyTwoWeekHigh.raw);
-  if (ks.fiftyTwoWeekLow?.raw)    ratiosLive['52w Laag']      = String(ks.fiftyTwoWeekLow.raw);
+  // Fallback: probeer v10 response formaat
+  const qsResult = recData?.quoteSummary?.result?.[0];
+  if (!total && qsResult?.recommendationTrend) {
+    const trend = qsResult.recommendationTrend.trend?.[0] ?? {};
+    buy  = (trend.strongBuy ?? 0) + (trend.buy ?? 0);
+    hold = trend.hold ?? 0;
+    sell = (trend.strongSell ?? 0) + (trend.sell ?? 0);
+    total = buy + hold + sell;
+    recKey = qsResult.financialData?.recommendationKey ?? '';
+  }
+
+  if (total > 0) {
+    const buyRatio = (buy / total);
+    consensus = recKey === 'strong_buy'   ? 'Sterk Kopen'   :
+                recKey === 'buy'          ? 'Kopen'          :
+                recKey === 'hold'         ? 'Houden'         :
+                recKey === 'sell'         ? 'Verkopen'       :
+                buyRatio > 0.65 ? 'Sterk Kopen' :
+                buyRatio > 0.45 ? 'Kopen'       :
+                sell/total > 0.4 ? 'Verkopen'   : 'Houden';
+  }
+
+  // Koersdoelen uit chart meta
+  const meta = chartData?.chart?.result?.[0]?.meta ?? {};
+  const avgTarget  = meta.targetMeanPrice  ?? meta.targetPrice ?? null;
+  const highTarget = meta.fiftyTwoWeekHigh ?? null;
+  const lowTarget  = meta.fiftyTwoWeekLow  ?? null;
 
   const out = {
-    consensus, strongBuy, buy, hold, sell, strongSell, total,
-    avgTarget, highTarget, lowTarget, currentPrice: curPrice,
-    recKey, upgrades, ratiosLive,
-    pe:         curPrice && ks.trailingEps?.raw ? +(curPrice / ks.trailingEps.raw).toFixed(1) : null,
-    forwardPE:  ks.forwardPE?.raw    ?? null,
-    beta:       ks.beta?.raw         ?? null,
-    divYield:   sd.dividendYield?.raw ? +(sd.dividendYield.raw * 100).toFixed(2) : null,
-    roe:        fd.returnOnEquity?.raw ? +(fd.returnOnEquity.raw * 100).toFixed(1) : null,
-    week52High: ks.fiftyTwoWeekHigh?.raw ?? null,
-    week52Low:  ks.fiftyTwoWeekLow?.raw  ?? null,
+    consensus, buy, hold, sell,
+    strongBuy: 0, strongSell: 0,
+    total: total || 0,
+    avgTarget, highTarget: null, lowTarget: null,
+    currentPrice: meta.regularMarketPrice ?? null,
+    recKey, upgrades: [],
+    ratiosLive: {
+      '52w Hoog': meta.fiftyTwoWeekHigh ? String(meta.fiftyTwoWeekHigh) : undefined,
+      '52w Laag': meta.fiftyTwoWeekLow  ? String(meta.fiftyTwoWeekLow)  : undefined,
+    },
+    pe: null, forwardPE: null, beta: null, divYield: null, roe: null,
+    week52High: meta.fiftyTwoWeekHigh ?? null,
+    week52Low:  meta.fiftyTwoWeekLow  ?? null,
   };
 
-  dcSet(key, out, 6 * 60 * 60 * 1000);
+  // Verwijder undefined waarden uit ratiosLive
+  Object.keys(out.ratiosLive).forEach(k => {
+    if (out.ratiosLive[k] === undefined) delete out.ratiosLive[k];
+  });
+
+  dcSet(key, out, 6 * 60 * 60 * 1000); // 6u cache
   return out;
 }
 
