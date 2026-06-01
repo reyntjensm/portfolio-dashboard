@@ -5,9 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── CONFIGURATIE ─────────────────────────────────────────────────────────────
-// Cloudflare Pages proxy via _redirects — geen aparte Worker nodig
-const YF_PROXY  = '/yf';   // → query1.finance.yahoo.com
-const YF_PROXY2 = '/yf2';  // → query2.finance.yahoo.com
+const YF_WORKER = 'https://portfolio-dashboard.michiel-0be.workers.dev/yf';
 
 // Yahoo Finance ticker mapping (portfolio ticker → YF ticker)
 const YF_SYM_MAP = {
@@ -16,10 +14,9 @@ const YF_SYM_MAP = {
   ACKB:  'AKA.BR',
   SOF:   'SOF.BR',
   IFX:   'IFX.DE',
-  // Extra tickers die je via ➕ toevoegt worden automatisch opgezocht.
-  // Euronext Brussels: voeg .BR toe  (bv. KBC → KBC.BR)
-  // Xetra:            voeg .DE toe  (bv. SAP → SAP.DE)
-  // Euronext Amsterdam: voeg .AS toe (bv. ASML → ASML.AS)
+  // Extra tickers via ➕ werken automatisch voor US aandelen.
+  // Europese aandelen moet je hier toevoegen:
+  // KBC:  'KBC.BR', UCB: 'UCB.BR', ASML: 'ASML.AS', SAP: 'SAP.DE'
 };
 
 // Yahoo Finance periodes voor grafieken
@@ -44,18 +41,20 @@ function dcGet(k) {
 }
 function dcSet(k, v, ttl) { _dc[k] = { v, ts: Date.now(), ttl }; }
 
-// ─── HELPER: fetch met fallback naar allorigins ────────────────────────────────
-async function yfFetch(path, useProxy2 = false) {
-  const proxy = useProxy2 ? YF_PROXY2 : YF_PROXY;
-  // Eerste poging: via Cloudflare Pages _redirects proxy
+// ─── HELPER: fetch via Worker met fallback naar allorigins ────────────────────
+async function yfFetch(path, useQuery2 = false) {
+  const workerUrl = `${YF_WORKER}?endpoint=${useQuery2 ? 'v10' : 'v8'}${path}`;
+
+  // Eerste poging via eigen Worker
   try {
-    const r = await fetch(proxy + path, { signal: AbortSignal.timeout(10000) });
+    const r = await fetch(workerUrl, { signal: AbortSignal.timeout(10000) });
     if (r.ok) return r.json();
   } catch (_) {}
+
   // Fallback: allorigins.win publieke CORS proxy
-  const host = useProxy2 ? 'query2.finance.yahoo.com' : 'query1.finance.yahoo.com';
-  const fallbackUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://' + host + path)}`;
-  const r2 = await fetch(fallbackUrl, { signal: AbortSignal.timeout(12000) });
+  const host = useQuery2 ? 'query2.finance.yahoo.com' : 'query1.finance.yahoo.com';
+  const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://' + host + path)}`;
+  const r2 = await fetch(fallback, { signal: AbortSignal.timeout(12000) });
   if (!r2.ok) throw new Error(`Yahoo Finance niet bereikbaar (${r2.status})`);
   return r2.json();
 }
@@ -66,36 +65,48 @@ async function yfQuote(yfSym) {
   const cached = dcGet(key);
   if (cached) return cached;
 
-  const json = await yfFetch(`/v8/finance/chart/${encodeURIComponent(yfSym)}?interval=1d&range=1d`);
+  const url = `${YF_WORKER}?endpoint=v8/finance/chart/${encodeURIComponent(yfSym)}&interval=1d&range=1d`;
+  const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${yfSym}?interval=1d&range=1d`
+  )}`;
+
+  let json = null;
+  for (const u of [url, fallback]) {
+    try {
+      const r = await fetch(u, { signal: AbortSignal.timeout(10000) });
+      if (r.ok) { json = await r.json(); break; }
+    } catch (_) {}
+  }
+
   const result = json?.chart?.result?.[0];
   if (!result) throw new Error(`Geen quote data voor ${yfSym}`);
 
-  const m        = result.meta;
-  const price    = m.regularMarketPrice    ?? m.previousClose ?? 0;
-  const prev     = m.previousClose         ?? m.chartPreviousClose ?? price;
-  const chgAbs   = +(price - prev).toFixed(4);
-  const chgPct   = prev ? +(((price - prev) / prev) * 100).toFixed(4) : 0;
-  const isEU     = yfSym.includes('.');
+  const m      = result.meta;
+  const price  = m.regularMarketPrice    ?? m.previousClose ?? 0;
+  const prev   = m.previousClose         ?? m.chartPreviousClose ?? price;
+  const chgAbs = +(price - prev).toFixed(4);
+  const chgPct = prev ? +(((price - prev) / prev) * 100).toFixed(4) : 0;
+  const isEU   = yfSym.includes('.');
 
   const out = {
     price, chgAbs, chgPct,
-    prevClose: prev,
-    dayHigh:   m.regularMarketDayHigh ?? null,
-    dayLow:    m.regularMarketDayLow  ?? null,
-    wkHigh:    m.fiftyTwoWeekHigh     ?? null,
-    wkLow:     m.fiftyTwoWeekLow      ?? null,
-    volume:    m.regularMarketVolume  ?? null,
-    mktCap:    m.marketCap            ?? null,
-    currency:  m.currency             ?? (isEU ? 'EUR' : 'USD'),
-    exchange:  m.exchangeName         ?? '',
-    name:      m.longName ?? m.shortName ?? yfSym,
+    prevClose:   prev,
+    dayHigh:     m.regularMarketDayHigh ?? null,
+    dayLow:      m.regularMarketDayLow  ?? null,
+    wkHigh:      m.fiftyTwoWeekHigh     ?? null,
+    wkLow:       m.fiftyTwoWeekLow      ?? null,
+    volume:      m.regularMarketVolume  ?? null,
+    mktCap:      m.marketCap            ?? null,
+    currency:    m.currency             ?? (isEU ? 'EUR' : 'USD'),
+    exchange:    m.exchangeName         ?? '',
+    name:        m.longName ?? m.shortName ?? yfSym,
     pe: null, targetLow: null, targetMean: null, targetHigh: null,
     numAnalysts: null, recKey: null,
     strongBuy: 0, buy: 0, hold: 0, sell: 0, strongSell: 0,
     error: null,
   };
 
-  dcSet(key, out, 5 * 60 * 1000); // 5 min
+  dcSet(key, out, 5 * 60 * 1000); // 5 min cache
   return out;
 }
 
@@ -106,8 +117,19 @@ async function yfHistory(yfSym, period) {
   if (cached) return cached;
 
   const cfg = YF_HIST_CFG[period] || YF_HIST_CFG['1J'];
-  const path = `/v8/finance/chart/${encodeURIComponent(yfSym)}?range=${cfg.range}&interval=${cfg.interval}`;
-  const json = await yfFetch(path);
+  const yfPath = `/v8/finance/chart/${encodeURIComponent(yfSym)}?range=${cfg.range}&interval=${cfg.interval}`;
+  const url = `${YF_WORKER}?endpoint=v8/finance/chart/${encodeURIComponent(yfSym)}&range=${cfg.range}&interval=${cfg.interval}`;
+  const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+    `https://query1.finance.yahoo.com${yfPath}`
+  )}`;
+
+  let json = null;
+  for (const u of [url, fallback]) {
+    try {
+      const r = await fetch(u, { signal: AbortSignal.timeout(15000) });
+      if (r.ok) { json = await r.json(); break; }
+    } catch (_) {}
+  }
 
   const result = json?.chart?.result?.[0];
   if (!result) throw new Error(`Geen historische data voor ${yfSym}`);
@@ -141,11 +163,18 @@ async function yfAnalyst(yfSym) {
   if (cached) return cached;
 
   const modules = 'recommendationTrend,upgradeDowngradeHistory,financialData,defaultKeyStatistics,summaryDetail';
-  const path = `/v10/finance/quoteSummary/${encodeURIComponent(yfSym)}?modules=${modules}`;
+  const url = `${YF_WORKER}?endpoint=v10/finance/quoteSummary/${encodeURIComponent(yfSym)}&modules=${modules}`;
+  const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+    `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${yfSym}?modules=${modules}`
+  )}`;
 
-  let json;
-  try { json = await yfFetch(path, true); }    // query2
-  catch (_) { json = await yfFetch(path, false); } // query1 fallback
+  let json = null;
+  for (const u of [url, fallback]) {
+    try {
+      const r = await fetch(u, { signal: AbortSignal.timeout(12000) });
+      if (r.ok) { json = await r.json(); break; }
+    } catch (_) {}
+  }
 
   const s = json?.quoteSummary?.result?.[0];
   if (!s) return null;
@@ -185,8 +214,8 @@ async function yfAnalyst(yfSym) {
       fromGrade: h.fromGrade,
       toGrade:   h.toGrade,
       actionNl:
-        h.action === 'up'   ? '↑ Upgrade'    :
-        h.action === 'down' ? '↓ Downgrade'  :
+        h.action === 'up'   ? '↑ Upgrade'   :
+        h.action === 'down' ? '↓ Downgrade' :
         h.action === 'init' ? '▶ Initiatie'  : '→ Herbevestigd',
     }));
 
@@ -195,48 +224,48 @@ async function yfAnalyst(yfSym) {
   const sd = s.summaryDetail        ?? {};
   const ratiosLive = {};
   if (curPrice && ks.trailingEps?.raw)
-    ratiosLive['P/E (TTM)']    = (curPrice / ks.trailingEps.raw).toFixed(1) + '×';
-  if (ks.forwardPE?.fmt)         ratiosLive['P/E Fwd']       = ks.forwardPE.fmt;
-  if (ks.enterpriseToEbitda?.fmt)ratiosLive['EV/EBITDA']     = ks.enterpriseToEbitda.fmt;
+    ratiosLive['P/E (TTM)']     = (curPrice / ks.trailingEps.raw).toFixed(1) + '×';
+  if (ks.forwardPE?.fmt)          ratiosLive['P/E Fwd']       = ks.forwardPE.fmt;
+  if (ks.enterpriseToEbitda?.fmt) ratiosLive['EV/EBITDA']     = ks.enterpriseToEbitda.fmt;
   if (ks.priceToSalesTrailing12Months?.fmt)
-                                 ratiosLive['P/S']           = ks.priceToSalesTrailing12Months.fmt;
-  if (fd.grossMargins?.fmt)      ratiosLive['Brutomarge']    = fd.grossMargins.fmt;
-  if (fd.operatingMargins?.fmt)  ratiosLive['Bedrijfsmarge'] = fd.operatingMargins.fmt;
-  if (fd.returnOnEquity?.fmt)    ratiosLive['ROE']           = fd.returnOnEquity.fmt;
-  if (ks.beta?.fmt)              ratiosLive['Beta']          = ks.beta.fmt;
-  if (sd.dividendYield?.fmt)     ratiosLive['Div. Yield']    = sd.dividendYield.fmt;
-  if (ks.marketCap?.fmt)         ratiosLive['Mktcap']        = ks.marketCap.fmt;
-  if (ks.debtToEquity?.fmt)      ratiosLive['Schuld/EV']     = ks.debtToEquity.fmt;
-  if (ks.fiftyTwoWeekHigh?.raw)  ratiosLive['52w Hoog']      = String(ks.fiftyTwoWeekHigh.raw);
-  if (ks.fiftyTwoWeekLow?.raw)   ratiosLive['52w Laag']      = String(ks.fiftyTwoWeekLow.raw);
+                                  ratiosLive['P/S']           = ks.priceToSalesTrailing12Months.fmt;
+  if (fd.grossMargins?.fmt)       ratiosLive['Brutomarge']    = fd.grossMargins.fmt;
+  if (fd.operatingMargins?.fmt)   ratiosLive['Bedrijfsmarge'] = fd.operatingMargins.fmt;
+  if (fd.returnOnEquity?.fmt)     ratiosLive['ROE']           = fd.returnOnEquity.fmt;
+  if (ks.beta?.fmt)               ratiosLive['Beta']          = ks.beta.fmt;
+  if (sd.dividendYield?.fmt)      ratiosLive['Div. Yield']    = sd.dividendYield.fmt;
+  if (ks.marketCap?.fmt)          ratiosLive['Mktcap']        = ks.marketCap.fmt;
+  if (ks.debtToEquity?.fmt)       ratiosLive['Schuld/EV']     = ks.debtToEquity.fmt;
+  if (ks.fiftyTwoWeekHigh?.raw)   ratiosLive['52w Hoog']      = String(ks.fiftyTwoWeekHigh.raw);
+  if (ks.fiftyTwoWeekLow?.raw)    ratiosLive['52w Laag']      = String(ks.fiftyTwoWeekLow.raw);
 
   const out = {
     consensus, strongBuy, buy, hold, sell, strongSell, total,
     avgTarget, highTarget, lowTarget, currentPrice: curPrice,
     recKey, upgrades, ratiosLive,
-    pe:        curPrice && ks.trailingEps?.raw ? +(curPrice / ks.trailingEps.raw).toFixed(1) : null,
-    forwardPE: ks.forwardPE?.raw   ?? null,
-    beta:      ks.beta?.raw        ?? null,
-    divYield:  sd.dividendYield?.raw ? +(sd.dividendYield.raw * 100).toFixed(2) : null,
-    roe:       fd.returnOnEquity?.raw ? +(fd.returnOnEquity.raw * 100).toFixed(1) : null,
-    week52High:ks.fiftyTwoWeekHigh?.raw ?? null,
-    week52Low: ks.fiftyTwoWeekLow?.raw  ?? null,
+    pe:         curPrice && ks.trailingEps?.raw ? +(curPrice / ks.trailingEps.raw).toFixed(1) : null,
+    forwardPE:  ks.forwardPE?.raw    ?? null,
+    beta:       ks.beta?.raw         ?? null,
+    divYield:   sd.dividendYield?.raw ? +(sd.dividendYield.raw * 100).toFixed(2) : null,
+    roe:        fd.returnOnEquity?.raw ? +(fd.returnOnEquity.raw * 100).toFixed(1) : null,
+    week52High: ks.fiftyTwoWeekHigh?.raw ?? null,
+    week52Low:  ks.fiftyTwoWeekLow?.raw  ?? null,
   };
 
-  dcSet(out, out, 6 * 60 * 60 * 1000); // bug fix
-  dcSet(key, out, 6 * 60 * 60 * 1000); // 6u
+  dcSet(key, out, 6 * 60 * 60 * 1000); // 6u cache
   return out;
 }
 
 // ─── ANTHROPIC AI: ACTUEEL NIEUWS PER AANDEEL ────────────────────────────────
-// Stel eenmalig je API key in via de browser console:
+// Stel eenmalig je API key in via de browser console op je dashboard:
 //   setAnthropicKey('sk-ant-api03-...')
 // Key aanmaken op: console.anthropic.com → API Keys
 function setAnthropicKey(key) {
   if (key?.startsWith('sk-ant-')) {
     localStorage.setItem('pf_ant_key', key);
     console.log('✓ Anthropic API key opgeslagen');
-    showDbStatus('✓ Anthropic key opgeslagen — AI nieuws actief', 'green');
+    if (typeof showDbStatus === 'function')
+      showDbStatus('✓ Anthropic key opgeslagen — AI nieuws actief', 'green');
     return true;
   }
   console.warn('Ongeldige key — moet starten met sk-ant-');
@@ -299,9 +328,9 @@ Genereer 3 tot 4 items. Schrijf in het Nederlands.`,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// OVERRIDES — deze functies vervangen de originelen uit index.html
-// Ze hebben exact dezelfde naam en return-waarde zodat de rest van index.html
-// zonder aanpassingen blijft werken.
+// OVERRIDES — vervangen de originele functies uit index.html
+// Exact dezelfde naam en return-waarde zodat de rest van index.html
+// zonder enige aanpassing blijft werken.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // Vervangt fetchOneTicker (was Alpha Vantage + Finnhub)
@@ -328,7 +357,7 @@ async function fetchOneTicker(origTicker) {
       targetHigh:  null,
       numAnalysts: null,
       recKey:      null,
-      strongBuy:   0, buy: 0, hold: 0, sell: 0, strongSell: 0,
+      strongBuy: 0, buy: 0, hold: 0, sell: 0, strongSell: 0,
     };
   } catch (e) {
     throw new Error(`${origTicker}: ${e.message}`);
@@ -400,7 +429,9 @@ async function fetchAnalystData(ticker) {
   fetchAINews(ticker).then(news => {
     if (news?.length && STOCKS[ticker]) {
       newsCache[ticker] = { items: news, _isAI: true };
-      if (activeStock === ticker && activePage === 'detail') {
+      if (typeof activeStock !== 'undefined' && activeStock === ticker &&
+          typeof activePage  !== 'undefined' && activePage  === 'detail' &&
+          typeof renderDetail === 'function') {
         renderDetail(ticker);
       }
     }
@@ -410,8 +441,6 @@ async function fetchAnalystData(ticker) {
 }
 
 // Vervangt fetchNewsForTicker (was newsdata.io)
-// Geeft null terug zodat de hardcoded nieuws in STOCK_META zichtbaar blijft
-// totdat AI nieuws klaar is via fetchAINews (hierboven).
 async function fetchNewsForTicker(ticker) {
   if (newsCache[ticker]) return newsCache[ticker];
   return null;
@@ -423,5 +452,6 @@ async function fetchWlNews(ticker) {
   return null;
 }
 
-console.log('✓ src/data.js geladen — Yahoo Finance actief, Anthropic AI nieuws klaar');
-console.log('  Stel AI nieuws in via: setAnthropicKey("sk-ant-api03-...")');
+console.log('✓ src/data.js geladen — Yahoo Finance via Worker actief');
+console.log('  Worker URL:', YF_WORKER);
+console.log('  AI nieuws instellen: setAnthropicKey("sk-ant-api03-...")');
