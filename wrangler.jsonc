@@ -4,6 +4,12 @@
   "compatibility_date": "2024-11-01",
   "assets": {
     "directory": ".",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    "exclude": [
+      ".git",
+      ".wrangler",
+      "src/worker.js",
+      "wrangler.jsonc"
+    ]
   }
 }
